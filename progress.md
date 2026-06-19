@@ -2,6 +2,25 @@
 
 ## Session: 2026-06-19
 
+### GitHub Sync And Profiler Evidence Start
+
+- **Status:** synced and profiler evidence collection started
+- Actions taken:
+  - Confirmed `origin` points to `https://github.com/AstarteCN/HOPE.git` and `upstream` push is disabled.
+  - Kept `.codegraph/`, `.venv/`, `raw_paper/`, training logs, and generated runtime caches out of the commit.
+  - Configured repo-local Git identity from the authenticated `gh` account: `AstarteCN <105480757+AstarteCN@users.noreply.github.com>`.
+  - Committed the safe-speed framework and research snapshot as `d4eec63 Add Stage 3 safe speed tooling`.
+  - Pushed `codex/stage3-resource-study` to `origin`.
+  - Created draft PR `https://github.com/AstarteCN/HOPE/pull/1`.
+  - Added explicit `--profile-mode original|command-only` support to `tools/stage3/profile_stage3_components.py`.
+  - Added TDD coverage in `tools/stage3/tests/test_profile_stage3_components.py`; the new test first failed because `profile_mode_settings` did not exist, then passed after implementation.
+  - Ran full Stage 3 tool tests: `30` tests passed.
+  - Collected fresh bounded profiler traces:
+    - Original: `docs/research/stage3_profile_original_20260619.json` and `.md`.
+    - Command-only: `docs/research/stage3_profile_command_only_20260619.json` and `.md`.
+  - Initial evidence: compare per-call component cost, not raw total time, because the two bounded diagnostics collected different transition counts. `env.step` and `ParkingAgent.get_action` remain the dominant components in both modes.
+  - No original files under `src/train`, `src/env`, or `src/model` were modified.
+
 ### Stage 3: Safe-Speed 20K PRD
 
 - **Status:** PRD accepted and converted to implementation plan

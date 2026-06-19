@@ -62,6 +62,24 @@ Focus on training methodology and engineering architecture:
 - Multiprocess or batched data-collection feasibility, only if it can preserve curriculum, action mask, and replay semantics.
 - Checkpoint/evaluation automation so long runs can be stopped, compared, and resumed intentionally.
 
+## Fresh Profiler Trace: 2026-06-19
+
+After syncing the safe-speed framework to GitHub, the profiler was extended with explicit profile modes:
+
+- `original`: mirrors the original `argparse type=bool` behavior where `visualize` and `verbose` are truthy, using `verbose=True` and effective render mode `human`.
+- `command-only`: mirrors the validated `--visualize= --verbose=` run mode, using `verbose=False` and effective render mode `rgb_array`.
+
+Bounded traces were collected with `12` episodes, `120` max steps per episode, and `20` requested SAC updates:
+
+| Mode | Output | Total seconds | Transitions | `env.step` avg | `get_action` avg | `SACAgent.update` avg |
+|------|--------|--------------:|------------:|---------------:|-----------------:|----------------------:|
+| original | `docs/research/stage3_profile_original_20260619.json` | `13.239` | `630` | `10.341 ms` | `3.567 ms` | `58.146 ms` |
+| command-only | `docs/research/stage3_profile_command_only_20260619.json` | `18.967` | `1171` | `9.292 ms` | `3.275 ms` | `45.366 ms` |
+
+Interpretation caveat: raw total seconds are not directly comparable because the two bounded diagnostics collected different episode trajectories and transition counts. Per-call costs are more useful here. Command-only mode was lighter per `env.step` and per `ParkingAgent.get_action`, which is consistent with the previous 20K smoke showing no quality regression from disabling verbose/display overhead. However, the remaining bottleneck is still dominated by `env.step` (`62-67%` of measured component wall) plus action selection (`21-24%`).
+
+The fresh trace does not justify a source-level optimization yet. It narrows the next research task: decompose `env.step` into render/image construction, lidar simulation, action-mask generation, Reeds-Shepp probing, collision/status checks, and wrapper overhead so the first speed candidate targets a measured hot path while preserving HOPE semantics.
+
 ## Safe Research Plan
 
 Start with measurement and opt-in wrappers before source changes:

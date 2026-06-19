@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 8 safe-speed 20K framework implementation, final verification, and final code review complete; ready for user handoff
+Phase 6 profiler evidence collection started after syncing the safe-speed framework to GitHub
 
 ## Phases
 
@@ -65,9 +65,9 @@ Phase 8 safe-speed 20K framework implementation, final verification, and final c
 - [x] Avoid large algorithmic rewrites, OGM implementation, reward redesign, curriculum removal, action-mask removal, or source changes under `src/train`, `src/env`, or `src/model` without a separate user-approved implementation plan.
 - [x] Produce a concrete research plan before any source-level optimization.
 - [x] Complete a deeper paper/code/training-summary research note that separates HOPE invariants, safe operational parameters, controlled hyperparameter experiments, and red-line changes.
-- [ ] Execute the research plan by collecting a fresh profiler trace of the original and command-only training paths.
+- [x] Execute the research plan by collecting a fresh profiler trace of the original and command-only training paths.
 - [ ] Turn profiler evidence into an implementation plan for the next user-approved speed experiment.
-- **Status:** research-only deep dive complete; profiler evidence collection and any implementation remain pending.
+- **Status:** initial profiler evidence collected. Next step is to turn the trace into a focused implementation plan for finer `env.step` subcomponent profiling before any source-level speed change.
 
 ### Phase 7: Safe-Speed 20K PRD
 
@@ -134,6 +134,8 @@ Phase 8 safe-speed 20K framework implementation, final verification, and final c
 | Prioritize measurement before source optimization | Current evidence points to environment/render/action-mask/RS/replay pipeline costs, so the next implementation should add opt-in profiling and parity harnesses before changing hot paths. |
 | Use 20K as the next speed-test validation budget | The user explicitly selected future tests to use 20K episodes and compare against the current command-only 20K result as baseline. |
 | PRD scope B accepted | The PRD should include measurement tooling, parity checks, a 20K gated workflow, and candidate optimization admission rules, without directly implementing optimization code. |
+| Safe-speed framework synced to GitHub before further work | Commit `d4eec63` was pushed to `origin/codex/stage3-resource-study` and draft PR `https://github.com/AstarteCN/HOPE/pull/1` was created against the user's fork. |
+| Fresh profiler traces should compare per-call costs, not raw total time | The 2026-06-19 original and command-only bounded diagnostics collected different transition counts, so total wall time is confounded by episode path length. Per-call costs still show `env.step` and `ParkingAgent.get_action` dominate both modes. |
 
 ## Errors Encountered
 

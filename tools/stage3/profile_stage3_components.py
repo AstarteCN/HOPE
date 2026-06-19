@@ -19,6 +19,20 @@ SRC_ROOT = REPO_ROOT / "src"
 ORIGINAL_CWD = Path.cwd()
 SCENES = ("Normal", "Complex", "Extrem", "dlp")
 NOTE = "measurement_only_not_quality_evidence"
+PROFILE_MODES = {
+    "original": {
+        "verbose": True,
+        "render_mode": None,
+        "expected_effective_render_mode": "human",
+        "description": "Original argparse bool semantics: visualize truthy, verbose truthy.",
+    },
+    "command-only": {
+        "verbose": False,
+        "render_mode": "rgb_array",
+        "expected_effective_render_mode": "rgb_array",
+        "description": "Validated command-only flags: --visualize= --verbose=.",
+    },
+}
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
@@ -81,6 +95,14 @@ def _non_negative_int(value: str) -> int:
     return parsed
 
 
+def profile_mode_settings(profile_mode: str) -> dict[str, Any]:
+    try:
+        return dict(PROFILE_MODES[profile_mode])
+    except KeyError as exc:
+        choices = ", ".join(sorted(PROFILE_MODES))
+        raise ValueError(f"unknown profile mode {profile_mode!r}; expected one of: {choices}") from exc
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Measure bounded HOPE Stage 3 component timings without producing training-quality evidence."
@@ -88,6 +110,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--episodes", type=_positive_int, default=3)
     parser.add_argument("--max-steps", type=_positive_int, default=50)
     parser.add_argument("--updates", type=_non_negative_int, default=5)
+    parser.add_argument("--profile-mode", choices=sorted(PROFILE_MODES), default="command-only")
     parser.add_argument("--json", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
     return parser.parse_args()
@@ -125,9 +148,14 @@ def _load_hope_objects() -> dict[str, Any]:
     }
 
 
-def _make_env(hope: dict[str, Any]) -> Any:
+def _make_env(hope: dict[str, Any], profile_mode: str) -> Any:
+    settings = profile_mode_settings(profile_mode)
     return hope["CarParkingWrapper"](
-        hope["CarParking"](fps=100, verbose=False, render_mode="rgb_array")
+        hope["CarParking"](
+            fps=100,
+            verbose=bool(settings["verbose"]),
+            render_mode=settings["render_mode"],
+        )
     )
 
 
@@ -300,7 +328,7 @@ def _environment_report() -> dict[str, Any]:
     return report
 
 
-def run_diagnostic(episodes: int, max_steps: int, updates: int) -> dict[str, Any]:
+def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: str) -> dict[str, Any]:
     timers = TimerTable()
     skipped: list[dict[str, str]] = []
     notes: list[str] = [
@@ -318,7 +346,7 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int) -> dict[str, Any
     try:
         hope = _load_hope_objects()
         np.random.seed(int(hope["SEED"]))
-        env = _make_env(hope)
+        env = _make_env(hope, profile_mode)
         env.action_space.seed(int(hope["SEED"]))
         parking_agent = _make_agent(hope, env)
 
@@ -375,6 +403,12 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int) -> dict[str, Any
             "episodes": episodes,
             "max_steps": max_steps,
             "updates": updates,
+            "profile_mode": profile_mode,
+        },
+        "profile_mode": {
+            "name": profile_mode,
+            **profile_mode_settings(profile_mode),
+            "effective_render_mode": getattr(env, "render_mode", None) if env is not None else None,
         },
         "environment": _environment_report(),
         "total_seconds": total_seconds,
@@ -396,6 +430,9 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         "",
         f"- Status: `{report['status']}`",
         f"- Note: `{report['note']}`",
+        f"- Profile mode: `{report['cli_args']['profile_mode']}`",
+        f"- Render mode: `{report['profile_mode']['effective_render_mode']}`",
+        f"- Verbose env: `{report['profile_mode']['verbose']}`",
         f"- Episodes: `{report['cli_args']['episodes']}`",
         f"- Max steps per episode: `{report['cli_args']['max_steps']}`",
         f"- Updates requested/completed: `{report['updates_requested']}` / `{report['updates_completed']}`",
@@ -448,7 +485,7 @@ def main() -> int:
     args = _parse_args()
     json_path = _resolve_output_path(args.json)
     markdown_path = _resolve_output_path(args.markdown)
-    report = run_diagnostic(args.episodes, args.max_steps, args.updates)
+    report = run_diagnostic(args.episodes, args.max_steps, args.updates, args.profile_mode)
     write_json(report, json_path)
     write_markdown(report, markdown_path)
     return 1 if report["status"] == "fail" else 0
