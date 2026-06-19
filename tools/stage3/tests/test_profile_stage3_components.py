@@ -1,6 +1,10 @@
 import unittest
 
-from tools.stage3.profile_stage3_components import profile_detail_components, profile_mode_settings
+from tools.stage3.profile_stage3_components import (
+    profile_action_mask_settings,
+    profile_detail_components,
+    profile_mode_settings,
+)
 
 
 class ProfileStage3ComponentsTests(unittest.TestCase):
@@ -19,6 +23,17 @@ class ProfileStage3ComponentsTests(unittest.TestCase):
     def test_profile_mode_settings_rejects_unknown_mode(self):
         with self.assertRaises(ValueError):
             profile_mode_settings("unknown")
+
+    def test_profile_action_mask_settings_accepts_known_modes(self):
+        original = profile_action_mask_settings("original")
+        fast = profile_action_mask_settings("fast")
+
+        self.assertFalse(original["fast_get_steps"])
+        self.assertTrue(fast["fast_get_steps"])
+
+    def test_profile_action_mask_settings_rejects_unknown_mode(self):
+        with self.assertRaises(ValueError):
+            profile_action_mask_settings("unknown")
 
     def test_env_step_detail_components_cover_render_sim_status_and_rs(self):
         components = profile_detail_components("env-step")

@@ -33,6 +33,16 @@ PROFILE_MODES = {
         "description": "Validated command-only flags: --visualize= --verbose=.",
     },
 }
+ACTION_MASK_MODES = {
+    "original": {
+        "fast_get_steps": False,
+        "description": "Default HOPE ActionMask.get_steps behavior.",
+    },
+    "fast": {
+        "fast_get_steps": True,
+        "description": "Opt-in exact-output fast ActionMask.get_steps path.",
+    },
+}
 PROFILE_DETAILS = {
     "basic": (),
     "env-step": (
@@ -155,6 +165,14 @@ def profile_mode_settings(profile_mode: str) -> dict[str, Any]:
         raise ValueError(f"unknown profile mode {profile_mode!r}; expected one of: {choices}") from exc
 
 
+def profile_action_mask_settings(action_mask_mode: str) -> dict[str, Any]:
+    try:
+        return dict(ACTION_MASK_MODES[action_mask_mode])
+    except KeyError as exc:
+        choices = ", ".join(sorted(ACTION_MASK_MODES))
+        raise ValueError(f"unknown action mask mode {action_mask_mode!r}; expected one of: {choices}") from exc
+
+
 def profile_detail_components(detail: str) -> tuple[str, ...]:
     try:
         return PROFILE_DETAILS[detail]
@@ -171,6 +189,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-steps", type=_positive_int, default=50)
     parser.add_argument("--updates", type=_non_negative_int, default=5)
     parser.add_argument("--profile-mode", choices=sorted(PROFILE_MODES), default="command-only")
+    parser.add_argument("--action-mask-mode", choices=sorted(ACTION_MASK_MODES), default="original")
     parser.add_argument("--detail", choices=sorted(PROFILE_DETAILS), default="basic")
     parser.add_argument("--json", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
@@ -209,18 +228,27 @@ def _load_hope_objects() -> dict[str, Any]:
     }
 
 
-def _make_env(hope: dict[str, Any], profile_mode: str) -> Any:
+def _set_action_mask_mode(target: Any, action_mask_mode: str) -> None:
+    settings = profile_action_mask_settings(action_mask_mode)
+    action_filter = getattr(target, "action_filter", None)
+    if action_filter is not None and hasattr(action_filter, "fast_get_steps"):
+        action_filter.fast_get_steps = bool(settings["fast_get_steps"])
+
+
+def _make_env(hope: dict[str, Any], profile_mode: str, action_mask_mode: str) -> Any:
     settings = profile_mode_settings(profile_mode)
-    return hope["CarParkingWrapper"](
+    env = hope["CarParkingWrapper"](
         hope["CarParking"](
             fps=100,
             verbose=bool(settings["verbose"]),
             render_mode=settings["render_mode"],
         )
     )
+    _set_action_mask_mode(env.env, action_mask_mode)
+    return env
 
 
-def _make_agent(hope: dict[str, Any], env: Any) -> Any:
+def _make_agent(hope: dict[str, Any], env: Any, action_mask_mode: str) -> Any:
     configs = {
         "discrete": False,
         "observation_shape": env.observation_shape,
@@ -238,7 +266,9 @@ def _make_agent(hope: dict[str, Any], env: Any) -> Any:
         * env.vehicle.kinetic_model.n_step
         * hope["VALID_SPEED"][1]
     )
-    return hope["ParkingAgent"](rl_agent, hope["RsPlanner"](step_ratio))
+    parking_agent = hope["ParkingAgent"](rl_agent, hope["RsPlanner"](step_ratio))
+    _set_action_mask_mode(parking_agent.agent, action_mask_mode)
+    return parking_agent
 
 
 def _install_env_step_detail_timers(env: Any, timers: TimerTable) -> ExitStack:
@@ -439,7 +469,14 @@ def _environment_report() -> dict[str, Any]:
     return report
 
 
-def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: str, detail: str) -> dict[str, Any]:
+def run_diagnostic(
+    episodes: int,
+    max_steps: int,
+    updates: int,
+    profile_mode: str,
+    detail: str,
+    action_mask_mode: str = "original",
+) -> dict[str, Any]:
     timers = TimerTable()
     skipped: list[dict[str, str]] = []
     notes: list[str] = [
@@ -459,9 +496,9 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
     try:
         hope = _load_hope_objects()
         np.random.seed(int(hope["SEED"]))
-        env = _make_env(hope, profile_mode)
+        env = _make_env(hope, profile_mode, action_mask_mode)
         env.action_space.seed(int(hope["SEED"]))
-        parking_agent = _make_agent(hope, env)
+        parking_agent = _make_agent(hope, env, action_mask_mode)
 
         with _install_env_step_detail_timers(env, timers) if detail == "env-step" else ExitStack():
             run_summary = _run_episodes(
@@ -518,6 +555,7 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
             "max_steps": max_steps,
             "updates": updates,
             "profile_mode": profile_mode,
+            "action_mask_mode": action_mask_mode,
             "detail": detail,
         },
         "profile_mode": {
@@ -529,6 +567,10 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
             "name": detail,
             "components": list(profile_detail_components(detail)),
             "nested_timings": bool(detail != "basic"),
+        },
+        "action_mask_mode": {
+            "name": action_mask_mode,
+            **profile_action_mask_settings(action_mask_mode),
         },
         "environment": _environment_report(),
         "total_seconds": total_seconds,
@@ -551,6 +593,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"- Status: `{report['status']}`",
         f"- Note: `{report['note']}`",
         f"- Profile mode: `{report['cli_args']['profile_mode']}`",
+        f"- Action mask mode: `{report['cli_args']['action_mask_mode']}`",
         f"- Detail: `{report['cli_args']['detail']}`",
         f"- Render mode: `{report['profile_mode']['effective_render_mode']}`",
         f"- Verbose env: `{report['profile_mode']['verbose']}`",
@@ -606,7 +649,14 @@ def main() -> int:
     args = _parse_args()
     json_path = _resolve_output_path(args.json)
     markdown_path = _resolve_output_path(args.markdown)
-    report = run_diagnostic(args.episodes, args.max_steps, args.updates, args.profile_mode, args.detail)
+    report = run_diagnostic(
+        args.episodes,
+        args.max_steps,
+        args.updates,
+        args.profile_mode,
+        args.detail,
+        args.action_mask_mode,
+    )
     write_json(report, json_path)
     write_markdown(report, markdown_path)
     return 1 if report["status"] == "fail" else 0

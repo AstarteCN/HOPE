@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 6 env.step internal profiling complete; first safe optimization point selected for planning
+Phase 9 opt-in fast action mask implemented; documentation and final push pending
 
 ## Phases
 
@@ -90,6 +90,20 @@ Phase 6 env.step internal profiling complete; first safe optimization point sele
 - [x] Run Task 10 final verification for the safe-speed framework and protected-source boundaries.
 - **Status:** implementation, final verification, and final code review complete. Final verification passed 28 Stage 3 tool tests, PowerShell wrapper parser checks, baseline TensorBoard summary export, parity/profile smoke checks, compare dry-run, `git diff --check`, and protected-source diff checks.
 
+### Phase 9: Opt-In Fast Action Mask
+
+- [x] Create `docs/superpowers/plans/2026-06-19-hope-stage3-fast-action-mask.md`.
+- [x] Write failing TDD tests for default-off fast action mask parity and profiler action-mask mode.
+- [x] Implement `ActionMask(fast_get_steps=False)` with default behavior unchanged.
+- [x] Add `_get_steps_original()` and `_get_steps_fast()` so the optimized branch is explicit and reviewable.
+- [x] Add `--action-mask-mode {original,fast}` to bounded profiler diagnostics.
+- [x] Verify exact-output parity on deterministic edge lidar samples and seeded random lidar samples.
+- [x] Run full Stage 3 tool tests.
+- [x] Run bounded original/fast env-step profile comparison.
+- [x] Document results in `docs/research/2026-06-19-stage3-fast-action-mask-opt-in.md`.
+- [ ] Run final hygiene checks and push to the draft PR.
+- **Status:** implementation and bounded verification complete. This is not a 20K quality result; fast action mask is admitted only as a future 20K gated candidate.
+
 ## Key Questions
 
 1. Does the original training run fully use the local RTX 4080 SUPER and CPU resources?
@@ -137,6 +151,8 @@ Phase 6 env.step internal profiling complete; first safe optimization point sele
 | Safe-speed framework synced to GitHub before further work | Commit `d4eec63` was pushed to `origin/codex/stage3-resource-study` and draft PR `https://github.com/AstarteCN/HOPE/pull/1` was created against the user's fork. |
 | Fresh profiler traces should compare per-call costs, not raw total time | The 2026-06-19 original and command-only bounded diagnostics collected different transition counts, so total wall time is confounded by episode path length. Per-call costs still show `env.step` and `ParkingAgent.get_action` dominate both modes. |
 | First true safe optimization point is `ActionMask.get_steps` | Detailed env-step profiling shows action mask costs about `1.78 ms/raw_step`; an equivalent allocation-free formula matched outputs exactly in a micro-probe and reduced isolated calls from about `1.48 ms` to `0.77 ms`. This preserves action-mask semantics and is safer than touching the RGB image pipeline first. |
+| Keep fast action mask default-off | The approved source change must not silently alter original HOPE training. `ActionMask()` still uses the original `get_steps` behavior; fast mode requires `fast_get_steps=True` or profiler `--action-mask-mode fast`. |
+| Treat fast action mask as an admitted candidate, not a validated training speedup | Bounded diagnostics show action-mask average cost dropped from `1.694 ms` to `0.821 ms`, but the change still needs a future 20K gated run against the command-only 20K baseline before it can be called safe for training. |
 
 ## Errors Encountered
 
@@ -151,6 +167,6 @@ Phase 6 env.step internal profiling complete; first safe optimization point sele
 
 ## Notes
 
-- Do not modify original HOPE source files during Stage 3 performance/resource work. Use external monitoring, wrappers, or new opt-in experiment entry points unless the user explicitly approves a separate source-change plan.
+- Do not modify original HOPE source files during Stage 3 performance/resource work unless the user explicitly approves a separate source-change plan. The 2026-06-19 approved exception is the default-off `ActionMask.get_steps` fast path in `src/model/action_mask.py`.
 - Do not install into global Python.
 - Do not run OGM implementation work in this stage.

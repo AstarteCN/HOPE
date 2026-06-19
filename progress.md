@@ -421,6 +421,29 @@
 | 2026-06-19 | While exploring TensorBoard JSON, attempted to inspect a non-existent `scalar_summaries` property | 1 | Read the actual schema and used `scalars.<tag>` entries for reward, loss, success-rate, and step summaries. |
 | 2026-06-19 | A PowerShell comparison helper used invalid dynamic property syntax with inline `if`, so the eval comparison rows were empty on the first try | 1 | Re-ran the helper with an explicit scene-to-property map; final comparison output was complete. |
 
+### Phase 9: Opt-In Fast Action Mask
+
+- **Status:** implementation and bounded verification complete; final hygiene/push pending.
+- **Started:** 2026-06-19
+- Actions taken:
+  - Read current planning context and confirmed the working tree was clean on `codex/stage3-resource-study`.
+  - Created `docs/superpowers/plans/2026-06-19-hope-stage3-fast-action-mask.md`.
+  - Wrote failing TDD tests in `tools/stage3/tests/test_fast_action_mask.py` and `tools/stage3/tests/test_profile_stage3_components.py`.
+  - Verified red tests:
+    - `ActionMask.__init__()` rejected missing `fast_get_steps`.
+    - profiler tests failed because `profile_action_mask_settings` was not implemented.
+  - Implemented default-off `fast_get_steps` dispatch in `src/model/action_mask.py`.
+  - Kept the original implementation in `_get_steps_original()` and added `_get_steps_fast()` as a separate explicit branch.
+  - Added profiler `--action-mask-mode {original,fast}` for bounded diagnostics.
+  - Ran full Stage 3 tool tests: 37 tests passed.
+  - Ran bounded fast action-mask profile and same-budget original action-mask profile.
+  - Wrote `docs/research/2026-06-19-stage3-fast-action-mask-opt-in.md`.
+- Key measurement:
+  - Original action mask profile: `1.694 ms` action-mask avg, `9.345 ms` env-step avg.
+  - Fast action mask profile: `0.821 ms` action-mask avg, `8.205 ms` env-step avg.
+- Caveat:
+  - This is only bounded measurement evidence. It does not replace the future 20K gated candidate run against the command-only 20K baseline.
+
 ## 5-Question Reboot Check
 
 | Question | Answer |

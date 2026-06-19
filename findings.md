@@ -208,6 +208,9 @@
 | Convert safe-speed PRD scope B into an implementation plan | The accepted scope is measurement tooling, parity checks, a 20K gated workflow, and candidate admission rules; the executable plan is `docs/superpowers/plans/2026-06-19-hope-stage3-safe-speed-20k-framework.md`. |
 | Keep safe-speed framework changes outside protected HOPE source paths | The plan adds opt-in tools under `tools/stage3/` and reports/planning docs, while preserving `src/train`, `src/env`, and `src/model`. |
 | Use `hard_reject_has_nonfinite` as the safe-speed 20K hard-reject gate | Candidate reports and comparisons should reject runs with non-finite hard-reject TensorBoard metrics before considering speed follow-up eligibility. |
+| First approved safe source optimization is default-off fast action mask | The user approved continuing after env-step profiling identified `ActionMask.get_steps` as the safest hot-path target. The implementation keeps `ActionMask()` defaulting to the original path and enables the new branch only through `fast_get_steps=True` or profiler `--action-mask-mode fast`. |
+| Fast action mask passes exact-output unit parity | `tools/stage3/tests/test_fast_action_mask.py` compares edge lidar samples and 32 seeded random lidar samples; `ActionMask(fast_get_steps=True).get_steps(...)` exactly equals the original output in all checked cases. |
+| Bounded profile shows fast action mask lowers env-step cost | In command-only env-step diagnostics, action-mask average cost changed from `1.694 ms` to `0.821 ms`, and `env.step` average changed from `9.345 ms` to `8.205 ms`. This is measurement-only evidence for 20K candidate admission, not a quality result. |
 
 ## Issues Encountered
 
