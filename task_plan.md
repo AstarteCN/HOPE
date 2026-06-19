@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 6 profiler evidence collection started after syncing the safe-speed framework to GitHub
+Phase 6 env.step internal profiling complete; first safe optimization point selected for planning
 
 ## Phases
 
@@ -66,8 +66,8 @@ Phase 6 profiler evidence collection started after syncing the safe-speed framew
 - [x] Produce a concrete research plan before any source-level optimization.
 - [x] Complete a deeper paper/code/training-summary research note that separates HOPE invariants, safe operational parameters, controlled hyperparameter experiments, and red-line changes.
 - [x] Execute the research plan by collecting a fresh profiler trace of the original and command-only training paths.
-- [ ] Turn profiler evidence into an implementation plan for the next user-approved speed experiment.
-- **Status:** initial profiler evidence collected. Next step is to turn the trace into a focused implementation plan for finer `env.step` subcomponent profiling before any source-level speed change.
+- [x] Turn profiler evidence into an implementation plan target for the next user-approved speed experiment.
+- **Status:** env.step internal profiling complete. First safe optimization target selected: an opt-in exact-output fast path for `ActionMask.get_steps`.
 
 ### Phase 7: Safe-Speed 20K PRD
 
@@ -136,6 +136,7 @@ Phase 6 profiler evidence collection started after syncing the safe-speed framew
 | PRD scope B accepted | The PRD should include measurement tooling, parity checks, a 20K gated workflow, and candidate optimization admission rules, without directly implementing optimization code. |
 | Safe-speed framework synced to GitHub before further work | Commit `d4eec63` was pushed to `origin/codex/stage3-resource-study` and draft PR `https://github.com/AstarteCN/HOPE/pull/1` was created against the user's fork. |
 | Fresh profiler traces should compare per-call costs, not raw total time | The 2026-06-19 original and command-only bounded diagnostics collected different transition counts, so total wall time is confounded by episode path length. Per-call costs still show `env.step` and `ParkingAgent.get_action` dominate both modes. |
+| First true safe optimization point is `ActionMask.get_steps` | Detailed env-step profiling shows action mask costs about `1.78 ms/raw_step`; an equivalent allocation-free formula matched outputs exactly in a micro-probe and reduced isolated calls from about `1.48 ms` to `0.77 ms`. This preserves action-mask semantics and is safer than touching the RGB image pipeline first. |
 
 ## Errors Encountered
 

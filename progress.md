@@ -21,6 +21,21 @@
   - Initial evidence: compare per-call component cost, not raw total time, because the two bounded diagnostics collected different transition counts. `env.step` and `ParkingAgent.get_action` remain the dominant components in both modes.
   - No original files under `src/train`, `src/env`, or `src/model` were modified.
 
+### Stage 3: Env Step Internal Profile
+
+- **Status:** complete; first safe optimization point selected
+- Actions taken:
+  - Read `CarParking.step`, `CarParking.render`, `CarParkingWrapper.step`, lidar, action-mask, observation-processing, vehicle, and RS-path code paths.
+  - Added `--detail env-step` to `tools/stage3/profile_stage3_components.py` with nested timers for render, image, lidar, action mask, simulation, status, reward, RS probing, and wrapper overhead.
+  - Added TDD coverage in `tools/stage3/tests/test_profile_stage3_components.py`; the new detail test failed before `profile_detail_components` existed and passed after implementation.
+  - Ran full Stage 3 tool tests: `32` tests passed.
+  - Collected command-only and original env-step detail traces under `docs/research/stage3_env_step_detail_*_20260619.*`.
+  - Ran a no-source-change micro-probe for an allocation-free `ActionMask.get_steps` equivalent formula. The formula matched outputs exactly on checked samples and improved isolated calls from about `1.481 ms` to `0.768 ms`.
+  - Ran a runtime monkeypatch estimate inside the bounded diagnostic: `env.render.action_mask` dropped to about `0.83 ms/call`, and raw-step average dropped to about `8.48 ms`.
+  - Wrote `docs/research/2026-06-19-stage3-env-step-internal-profile.md`.
+  - Selected the first safe optimization target: an opt-in exact-output fast path for `ActionMask.get_steps`.
+  - No original files under `src/train`, `src/env`, or `src/model` were modified.
+
 ### Stage 3: Safe-Speed 20K PRD
 
 - **Status:** PRD accepted and converted to implementation plan

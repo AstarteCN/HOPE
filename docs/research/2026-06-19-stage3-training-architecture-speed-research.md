@@ -80,6 +80,16 @@ Interpretation caveat: raw total seconds are not directly comparable because the
 
 The fresh trace does not justify a source-level optimization yet. It narrows the next research task: decompose `env.step` into render/image construction, lidar simulation, action-mask generation, Reeds-Shepp probing, collision/status checks, and wrapper overhead so the first speed candidate targets a measured hot path while preserving HOPE semantics.
 
+## Env Step Detail Follow-Up: 2026-06-19
+
+Detailed `env-step` traces were collected and summarized in:
+
+- `docs/research/2026-06-19-stage3-env-step-internal-profile.md`
+- `docs/research/stage3_env_step_detail_command_only_20260619.json`
+- `docs/research/stage3_env_step_detail_original_20260619.json`
+
+Decision from this pass: the first true safe optimization candidate should be an opt-in fast path for `ActionMask.get_steps` that removes per-step `step_save` allocation and assignment while preserving exact action-mask outputs. This was selected over the RGB image pipeline because it is smaller but much easier to validate exactly, and over display/frame-cap bypass because the measured residual is too small to be the first high-leverage change.
+
 ## Safe Research Plan
 
 Start with measurement and opt-in wrappers before source changes:

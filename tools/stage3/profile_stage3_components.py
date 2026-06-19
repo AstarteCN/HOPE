@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -32,6 +32,40 @@ PROFILE_MODES = {
         "expected_effective_render_mode": "rgb_array",
         "description": "Validated command-only flags: --visualize= --verbose=.",
     },
+}
+PROFILE_DETAILS = {
+    "basic": (),
+    "env-step": (
+        "env.raw_step.total",
+        "env.render.total",
+        "env.render.draw",
+        "env.render.img_capture",
+        "env.render.img_process",
+        "env.render.lidar_total",
+        "env.render.lidar_get_observation",
+        "env.render.lidar_rotate_filter",
+        "env.render.lidar_fast_calc",
+        "env.render.action_mask",
+        "env.render.action_mask_post_process",
+        "env.render.target",
+        "env.sim.vehicle_step",
+        "env.sim.kinematic_step",
+        "env.sim.vehicle_retreat",
+        "env.status.total",
+        "env.status.detect_collision",
+        "env.status.detect_outbound",
+        "env.status.check_arrived",
+        "env.status.check_time_exceeded",
+        "env.reward.total",
+        "env.reward.components",
+        "env.rs.find_path",
+        "env.rs.calc_all_paths",
+        "env.rs.calc_optimal_path",
+        "env.rs.traj_valid",
+        "env.wrapper.action_rescale",
+        "env.wrapper.reward_shaping",
+        "env.wrapper.observation_rescale",
+    ),
 }
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
@@ -81,6 +115,24 @@ def timed_local_method(target: Any, method_name: str, timers: TimerTable, compon
         setattr(target, method_name, original)
 
 
+@contextmanager
+def timed_callable_attr(target: Any, attr_name: str, timers: TimerTable, component_name: str) -> Iterator[None]:
+    original = getattr(target, attr_name)
+
+    def wrapped(*args: Any, **kwargs: Any) -> Any:
+        start = time.perf_counter()
+        try:
+            return original(*args, **kwargs)
+        finally:
+            timers.record(component_name, time.perf_counter() - start)
+
+    setattr(target, attr_name, wrapped)
+    try:
+        yield
+    finally:
+        setattr(target, attr_name, original)
+
+
 def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
@@ -103,6 +155,14 @@ def profile_mode_settings(profile_mode: str) -> dict[str, Any]:
         raise ValueError(f"unknown profile mode {profile_mode!r}; expected one of: {choices}") from exc
 
 
+def profile_detail_components(detail: str) -> tuple[str, ...]:
+    try:
+        return PROFILE_DETAILS[detail]
+    except KeyError as exc:
+        choices = ", ".join(sorted(PROFILE_DETAILS))
+        raise ValueError(f"unknown profile detail {detail!r}; expected one of: {choices}") from exc
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Measure bounded HOPE Stage 3 component timings without producing training-quality evidence."
@@ -111,6 +171,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--max-steps", type=_positive_int, default=50)
     parser.add_argument("--updates", type=_non_negative_int, default=5)
     parser.add_argument("--profile-mode", choices=sorted(PROFILE_MODES), default="command-only")
+    parser.add_argument("--detail", choices=sorted(PROFILE_DETAILS), default="basic")
     parser.add_argument("--json", type=Path, required=True)
     parser.add_argument("--markdown", type=Path, required=True)
     return parser.parse_args()
@@ -178,6 +239,56 @@ def _make_agent(hope: dict[str, Any], env: Any) -> Any:
         * hope["VALID_SPEED"][1]
     )
     return hope["ParkingAgent"](rl_agent, hope["RsPlanner"](step_ratio))
+
+
+def _install_env_step_detail_timers(env: Any, timers: TimerTable) -> ExitStack:
+    import env.reeds_shepp as rs_curve  # noqa: PLC0415
+
+    stack = ExitStack()
+    raw_env = env.env
+
+    stack.enter_context(timed_callable_attr(env, "action_func", timers, "env.wrapper.action_rescale"))
+    stack.enter_context(timed_callable_attr(env, "reward_func", timers, "env.wrapper.reward_shaping"))
+    stack.enter_context(timed_callable_attr(env, "obs_func", timers, "env.wrapper.observation_rescale"))
+
+    stack.enter_context(timed_local_method(raw_env, "step", timers, "env.raw_step.total"))
+    stack.enter_context(timed_local_method(raw_env, "render", timers, "env.render.total"))
+    stack.enter_context(timed_local_method(raw_env, "_render", timers, "env.render.draw"))
+    stack.enter_context(timed_local_method(raw_env, "_get_img_observation", timers, "env.render.img_capture"))
+    stack.enter_context(timed_local_method(raw_env, "_process_img_observation", timers, "env.render.img_process"))
+    stack.enter_context(timed_local_method(raw_env, "_get_lidar_observation", timers, "env.render.lidar_total"))
+    stack.enter_context(timed_local_method(raw_env, "_get_targt_repr", timers, "env.render.target"))
+
+    if raw_env.use_action_mask:
+        stack.enter_context(timed_local_method(raw_env.action_filter, "get_steps", timers, "env.render.action_mask"))
+        stack.enter_context(
+            timed_local_method(raw_env.action_filter, "post_process", timers, "env.render.action_mask_post_process")
+        )
+    if raw_env.use_lidar_observation:
+        stack.enter_context(timed_local_method(raw_env.lidar, "get_observation", timers, "env.render.lidar_get_observation"))
+        stack.enter_context(
+            timed_local_method(raw_env.lidar, "_rotate_and_filter_obstacles", timers, "env.render.lidar_rotate_filter")
+        )
+        stack.enter_context(timed_local_method(raw_env.lidar, "_fast_calc_lidar_obs", timers, "env.render.lidar_fast_calc"))
+
+    stack.enter_context(timed_local_method(raw_env.vehicle, "step", timers, "env.sim.vehicle_step"))
+    stack.enter_context(timed_local_method(raw_env.vehicle.kinetic_model, "step", timers, "env.sim.kinematic_step"))
+    stack.enter_context(timed_local_method(raw_env.vehicle, "retreat", timers, "env.sim.vehicle_retreat"))
+
+    stack.enter_context(timed_local_method(raw_env, "_check_status", timers, "env.status.total"))
+    stack.enter_context(timed_local_method(raw_env, "_detect_collision", timers, "env.status.detect_collision"))
+    stack.enter_context(timed_local_method(raw_env, "_detect_outbound", timers, "env.status.detect_outbound"))
+    stack.enter_context(timed_local_method(raw_env, "_check_arrived", timers, "env.status.check_arrived"))
+    stack.enter_context(timed_local_method(raw_env, "_check_time_exceeded", timers, "env.status.check_time_exceeded"))
+
+    stack.enter_context(timed_local_method(raw_env, "get_reward", timers, "env.reward.total"))
+    stack.enter_context(timed_local_method(raw_env, "_get_reward", timers, "env.reward.components"))
+    stack.enter_context(timed_local_method(raw_env, "find_rs_path", timers, "env.rs.find_path"))
+    stack.enter_context(timed_local_method(raw_env, "is_traj_valid", timers, "env.rs.traj_valid"))
+    stack.enter_context(timed_callable_attr(rs_curve, "calc_all_paths", timers, "env.rs.calc_all_paths"))
+    stack.enter_context(timed_callable_attr(rs_curve, "calc_optimal_path", timers, "env.rs.calc_optimal_path"))
+
+    return stack
 
 
 def _reset_env(env: Any, episode_index: int) -> Any:
@@ -328,7 +439,7 @@ def _environment_report() -> dict[str, Any]:
     return report
 
 
-def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: str) -> dict[str, Any]:
+def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: str, detail: str) -> dict[str, Any]:
     timers = TimerTable()
     skipped: list[dict[str, str]] = []
     notes: list[str] = [
@@ -336,6 +447,8 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
         "bounded diagnostic only; do not use as Stage 3 training-quality evidence",
         "timing wrappers are installed only on objects created by this diagnostic process",
     ]
+    if detail != "basic":
+        notes.append("detail timings include nested calls; do not sum them as exclusive wall-clock percentages")
     started_at = time.perf_counter()
     created_at_utc = datetime.now(timezone.utc).isoformat(timespec="seconds")
     env = None
@@ -350,13 +463,14 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
         env.action_space.seed(int(hope["SEED"]))
         parking_agent = _make_agent(hope, env)
 
-        run_summary = _run_episodes(
-            env=env,
-            parking_agent=parking_agent,
-            episodes=episodes,
-            max_steps=max_steps,
-            timers=timers,
-        )
+        with _install_env_step_detail_timers(env, timers) if detail == "env-step" else ExitStack():
+            run_summary = _run_episodes(
+                env=env,
+                parking_agent=parking_agent,
+                episodes=episodes,
+                max_steps=max_steps,
+                timers=timers,
+            )
         _time_replay_sample(parking_agent, timers, skipped)
         updates_completed = _time_updates(
             parking_agent=parking_agent,
@@ -404,11 +518,17 @@ def run_diagnostic(episodes: int, max_steps: int, updates: int, profile_mode: st
             "max_steps": max_steps,
             "updates": updates,
             "profile_mode": profile_mode,
+            "detail": detail,
         },
         "profile_mode": {
             "name": profile_mode,
             **profile_mode_settings(profile_mode),
             "effective_render_mode": getattr(env, "render_mode", None) if env is not None else None,
+        },
+        "profile_detail": {
+            "name": detail,
+            "components": list(profile_detail_components(detail)),
+            "nested_timings": bool(detail != "basic"),
         },
         "environment": _environment_report(),
         "total_seconds": total_seconds,
@@ -431,6 +551,7 @@ def write_markdown(report: dict[str, Any], path: Path) -> None:
         f"- Status: `{report['status']}`",
         f"- Note: `{report['note']}`",
         f"- Profile mode: `{report['cli_args']['profile_mode']}`",
+        f"- Detail: `{report['cli_args']['detail']}`",
         f"- Render mode: `{report['profile_mode']['effective_render_mode']}`",
         f"- Verbose env: `{report['profile_mode']['verbose']}`",
         f"- Episodes: `{report['cli_args']['episodes']}`",
@@ -485,7 +606,7 @@ def main() -> int:
     args = _parse_args()
     json_path = _resolve_output_path(args.json)
     markdown_path = _resolve_output_path(args.markdown)
-    report = run_diagnostic(args.episodes, args.max_steps, args.updates, args.profile_mode)
+    report = run_diagnostic(args.episodes, args.max_steps, args.updates, args.profile_mode, args.detail)
     write_json(report, json_path)
     write_markdown(report, markdown_path)
     return 1 if report["status"] == "fail" else 0
