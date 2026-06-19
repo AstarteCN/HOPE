@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 9 opt-in fast action mask implemented; documentation and final push pending
+Phase 9 opt-in fast action mask complete; next gate is a future 20K candidate run
 
 ## Phases
 
@@ -101,8 +101,8 @@ Phase 9 opt-in fast action mask implemented; documentation and final push pendin
 - [x] Run full Stage 3 tool tests.
 - [x] Run bounded original/fast env-step profile comparison.
 - [x] Document results in `docs/research/2026-06-19-stage3-fast-action-mask-opt-in.md`.
-- [ ] Run final hygiene checks and push to the draft PR.
-- **Status:** implementation and bounded verification complete. This is not a 20K quality result; fast action mask is admitted only as a future 20K gated candidate.
+- [x] Run final hygiene checks and push to the draft PR.
+- **Status:** complete. This is not a 20K quality result; fast action mask is admitted only as a future 20K gated candidate.
 
 ## Key Questions
 

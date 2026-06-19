@@ -423,7 +423,7 @@
 
 ### Phase 9: Opt-In Fast Action Mask
 
-- **Status:** implementation and bounded verification complete; final hygiene/push pending.
+- **Status:** complete and pushed to `origin/codex/stage3-resource-study`.
 - **Started:** 2026-06-19
 - Actions taken:
   - Read current planning context and confirmed the working tree was clean on `codex/stage3-resource-study`.
@@ -438,6 +438,8 @@
   - Ran full Stage 3 tool tests: 37 tests passed.
   - Ran bounded fast action-mask profile and same-budget original action-mask profile.
   - Wrote `docs/research/2026-06-19-stage3-fast-action-mask-opt-in.md`.
+  - Committed `40292ab Add opt-in fast action mask` and pushed it to the draft PR branch.
+  - Committed a follow-up planning-state sync after the push so root planning files no longer report the phase as pending.
 - Key measurement:
   - Original action mask profile: `1.694 ms` action-mask avg, `9.345 ms` env-step avg.
   - Fast action mask profile: `0.821 ms` action-mask avg, `8.205 ms` env-step avg.

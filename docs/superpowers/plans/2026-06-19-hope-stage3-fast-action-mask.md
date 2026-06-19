@@ -343,7 +343,7 @@ git status -sb
 
 Expected: no whitespace errors; changed files match this plan.
 
-- [ ] **Step 4: Commit and push**
+- [x] **Step 4: Commit and push**
 
 Run:
 
