@@ -9,6 +9,11 @@ parking
 # python
 __pycache__
 *.pyc
+.venv/
+
+# local research/runtime state
+.codegraph/
+raw_paper/
 
 # vscode
 .vscode

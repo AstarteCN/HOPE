@@ -1,0 +1,179 @@
+{
+  "log_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812",
+  "event_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812",
+  "min_episodes": 40000,
+  "episode_count": 39,
+  "training_budget_met": false,
+  "env_step_count": 4472,
+  "estimated_sac_updates_after_warmup": 0,
+  "missing_scalars": [
+    "actor_loss",
+    "critic_loss"
+  ],
+  "scalars": {
+    "total_reward": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": 5.862369537353516,
+      "last_value": -0.3821389973163605,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 1.1612053246070178,
+        "last_mean": 1.1612053246070178,
+        "delta": 0.0
+      },
+      "min": -6.025599002838135,
+      "max": 6.265482425689697,
+      "mean": 1.1612053246070178
+    },
+    "avg_reward": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": 0.05804326385259628,
+      "last_value": 0.016916753724217415,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 0.01145431136366171,
+        "last_mean": 0.01145431136366171,
+        "delta": 0.0
+      },
+      "min": -0.004984076600521803,
+      "max": 0.05804326385259628,
+      "mean": 0.01145431136366171
+    },
+    "action_std0": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": -0.0,
+      "last_value": -0.0,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": 0.0,
+        "delta": 0.0
+      },
+      "min": -0.0,
+      "max": -0.0,
+      "mean": 0.0
+    },
+    "action_std1": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": -0.0,
+      "last_value": -0.0,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": 0.0,
+        "delta": 0.0
+      },
+      "min": -0.0,
+      "max": -0.0,
+      "mean": 0.0
+    },
+    "alpha": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": 0.009999999776482582,
+      "last_value": 0.009999999776482582,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 0.009999999776482582,
+        "last_mean": 0.009999999776482582,
+        "delta": 0.0
+      },
+      "min": 0.009999999776482582,
+      "max": 0.009999999776482582,
+      "mean": 0.009999999776482582
+    },
+    "success_rate_Normal": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": 1.0,
+      "last_value": 0.800000011920929,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 0.8897842917686853,
+        "last_mean": 0.8897842917686853,
+        "delta": 0.0
+      },
+      "min": 0.7142857313156128,
+      "max": 1.0,
+      "mean": 0.8897842917686853
+    },
+    "success_rate_Complex": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": null,
+      "last_value": 0.699999988079071,
+      "has_nan_or_inf": true,
+      "trend": {
+        "first_mean": 0.5348371016351801,
+        "last_mean": 0.5348371016351801,
+        "delta": 0.0
+      },
+      "min": 0.0,
+      "max": 0.75,
+      "mean": 0.5348371016351801
+    },
+    "success_rate_Extrem": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": null,
+      "last_value": 0.0,
+      "has_nan_or_inf": true,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": 0.0,
+        "delta": 0.0
+      },
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0
+    },
+    "success_rate_dlp": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": null,
+      "last_value": 0.2222222238779068,
+      "has_nan_or_inf": true,
+      "trend": {
+        "first_mean": 0.10908289419280158,
+        "last_mean": 0.10908289419280158,
+        "delta": 0.0
+      },
+      "min": 0.0,
+      "max": 0.25,
+      "mean": 0.10908289419280158
+    },
+    "step_num": {
+      "count": 39,
+      "first_step": 0,
+      "last_step": 38,
+      "first_value": 101.0,
+      "last_value": 200.0,
+      "has_nan_or_inf": false,
+      "trend": {
+        "first_mean": 114.66666666666667,
+        "last_mean": 114.66666666666667,
+        "delta": 0.0
+      },
+      "min": 9.0,
+      "max": 200.0,
+      "mean": 114.66666666666667
+    }
+  },
+  "warnings": [
+    "episode_count 39 is below required minimum 40000",
+    "final step_num is near the 200-step timeout"
+  ]
+}

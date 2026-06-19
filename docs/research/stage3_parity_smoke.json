@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "episodes_per_scene": 1,
+  "max_steps": 5,
+  "render_modes": {
+    "left": "default",
+    "right": "rgb_array"
+  },
+  "observation_keys": [
+    "img",
+    "lidar",
+    "target",
+    "action_mask"
+  ],
+  "results": [
+    {
+      "scene": "Normal",
+      "case": 0,
+      "terminal_step": null,
+      "failures": []
+    },
+    {
+      "scene": "Complex",
+      "case": 0,
+      "terminal_step": null,
+      "failures": []
+    },
+    {
+      "scene": "Extrem",
+      "case": 0,
+      "terminal_step": null,
+      "failures": []
+    },
+    {
+      "scene": "dlp",
+      "case": 0,
+      "terminal_step": null,
+      "failures": []
+    }
+  ]
+}

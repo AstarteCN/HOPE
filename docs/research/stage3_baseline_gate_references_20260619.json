@@ -1,0 +1,303 @@
+{
+  "baseline_run_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812",
+  "baseline_checkpoint_map": {
+    "around_20k": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812\\SAC_19999.pt",
+    "around_36_5k": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812\\SAC_35999.pt"
+  },
+  "targets": {
+    "20000": {
+      "episode_count": 20001,
+      "scalar_max_step": 20000,
+      "env_step_count_to_target": 1821805.0,
+      "estimated_sac_updates_after_warmup": 181180,
+      "scalars": {
+        "total_reward": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 6.045902729034424,
+          "mean_last100": 4.514660147081595,
+          "mean_last500": 5.129346289510838,
+          "mean_first500": 0.9342855686694383,
+          "min": -6.435157299041748,
+          "max": 6.391245365142822,
+          "has_nonfinite": false
+        },
+        "avg_reward": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 0.06484255939722061,
+          "mean_last100": 0.06011367886327207,
+          "mean_last500": 0.08033881309069693,
+          "mean_first500": 0.007106029062793823,
+          "min": -0.02938389591872692,
+          "max": 0.19899095594882965,
+          "has_nonfinite": false
+        },
+        "actor_loss": {
+          "count": 9058,
+          "last_step": 20000,
+          "last_value": -0.26926952600479126,
+          "mean_last100": -0.6341515569388867,
+          "mean_last500": -0.526618616938591,
+          "mean_first500": 0.6220406908094883,
+          "min": -1.264522671699524,
+          "max": 0.9828919768333435,
+          "has_nonfinite": false
+        },
+        "critic_loss": {
+          "count": 9058,
+          "last_step": 20000,
+          "last_value": 0.06790469586849213,
+          "mean_last100": 0.12149807566776871,
+          "mean_last500": 0.13746440439671279,
+          "mean_first500": 0.08686775987036527,
+          "min": 0.007044602185487747,
+          "max": 1.6937000751495361,
+          "has_nonfinite": false
+        },
+        "action_std0": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": -0.26750293374061584,
+          "mean_last100": -0.26645430862903596,
+          "mean_last500": -0.2619561029672623,
+          "mean_first500": 0.004097704355448059,
+          "min": -0.26750293374061584,
+          "max": 0.03358412906527519,
+          "has_nonfinite": false
+        },
+        "action_std1": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": -0.5128098130226135,
+          "mean_last100": -0.5115322101116181,
+          "mean_last500": -0.5065799058675766,
+          "mean_first500": -0.0009354753237585101,
+          "min": -0.5128098130226135,
+          "max": 0.0019704748410731554,
+          "has_nonfinite": false
+        },
+        "alpha": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 0.004065393935889006,
+          "mean_last100": 0.0040734153846278785,
+          "mean_last500": 0.004100609473884105,
+          "mean_first500": 0.009897247409448027,
+          "min": 0.004065393935889006,
+          "max": 0.009999999776482582,
+          "has_nonfinite": false
+        },
+        "success_rate_Normal": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 1.0,
+          "mean_last100": 1.0,
+          "mean_last500": 1.0,
+          "mean_first500": 0.6708108710050583,
+          "min": 0.5897436141967773,
+          "max": 1.0,
+          "has_nonfinite": false
+        },
+        "success_rate_Complex": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 0.9399999976158142,
+          "mean_last100": 0.9555999994277954,
+          "mean_last500": 0.9646199989318848,
+          "mean_first500": 0.4283858038783073,
+          "min": 0.0,
+          "max": 1.0,
+          "has_nonfinite": true
+        },
+        "success_rate_Extrem": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 0.7300000190734863,
+          "mean_last100": 0.7350000143051147,
+          "mean_last500": 0.7676799947023392,
+          "mean_first500": 0.030719500564038753,
+          "min": 0.0,
+          "max": 0.8199999928474426,
+          "has_nonfinite": true
+        },
+        "success_rate_dlp": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 0.7799999713897705,
+          "mean_last100": 0.8165999901294708,
+          "mean_last500": 0.8131999934911728,
+          "mean_first500": 0.2881783148050308,
+          "min": 0.0,
+          "max": 0.9100000262260437,
+          "has_nonfinite": true
+        },
+        "step_num": {
+          "count": 20001,
+          "last_step": 20000,
+          "last_value": 31.0,
+          "mean_last100": 78.79,
+          "mean_last500": 67.2,
+          "mean_first500": 127.354,
+          "min": 1.0,
+          "max": 200.0,
+          "has_nonfinite": false
+        }
+      }
+    },
+    "36500": {
+      "episode_count": 36501,
+      "scalar_max_step": 36500,
+      "env_step_count_to_target": 2753920.0,
+      "estimated_sac_updates_after_warmup": 274392,
+      "scalars": {
+        "total_reward": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 6.239497661590576,
+          "mean_last100": 5.886814927458763,
+          "mean_last500": 5.721370772689581,
+          "mean_first500": 0.9342855686694383,
+          "min": -6.435157299041748,
+          "max": 6.391578197479248,
+          "has_nonfinite": false
+        },
+        "avg_reward": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 0.14918634295463562,
+          "mean_last100": 0.15573818497359754,
+          "mean_last500": 0.1376358027011156,
+          "mean_first500": 0.007106029062793823,
+          "min": -0.02938389591872692,
+          "max": 0.21476848423480988,
+          "has_nonfinite": false
+        },
+        "actor_loss": {
+          "count": 13718,
+          "last_step": 36496,
+          "last_value": -1.4654126167297363,
+          "mean_last100": -1.4832915538549423,
+          "mean_last500": -1.2551076717376708,
+          "mean_first500": 0.6220406908094883,
+          "min": -2.000162124633789,
+          "max": 0.9828919768333435,
+          "has_nonfinite": false
+        },
+        "critic_loss": {
+          "count": 13718,
+          "last_step": 36496,
+          "last_value": 0.1101754903793335,
+          "mean_last100": 0.15734096966683864,
+          "mean_last500": 0.1369118470698595,
+          "mean_first500": 0.08686775987036527,
+          "min": 0.007044602185487747,
+          "max": 1.6937000751495361,
+          "has_nonfinite": false
+        },
+        "action_std0": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": -0.5938337445259094,
+          "mean_last100": -0.5930324733257294,
+          "mean_last500": -0.5898032352924347,
+          "mean_first500": 0.004097704355448059,
+          "min": -0.5938337445259094,
+          "max": 0.03358412906527519,
+          "has_nonfinite": false
+        },
+        "action_std1": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": -0.8362079858779907,
+          "mean_last100": -0.8354961395263671,
+          "mean_last500": -0.832457692861557,
+          "mean_first500": -0.0009354753237585101,
+          "min": -0.8362079858779907,
+          "max": 0.0019704748410731554,
+          "has_nonfinite": false
+        },
+        "alpha": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 0.002560192020609975,
+          "mean_last100": 0.0025628131232224407,
+          "mean_last500": 0.0025737277171574533,
+          "mean_first500": 0.009897247409448027,
+          "min": 0.002560192020609975,
+          "max": 0.009999999776482582,
+          "has_nonfinite": false
+        },
+        "success_rate_Normal": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 0.9900000095367432,
+          "mean_last100": 0.9900000095367432,
+          "mean_last500": 0.9913800082206726,
+          "mean_first500": 0.6708108710050583,
+          "min": 0.5897436141967773,
+          "max": 1.0,
+          "has_nonfinite": false
+        },
+        "success_rate_Complex": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 1.0,
+          "mean_last100": 1.0,
+          "mean_last500": 0.9974000024795532,
+          "mean_first500": 0.4283858038783073,
+          "min": 0.0,
+          "max": 1.0,
+          "has_nonfinite": true
+        },
+        "success_rate_Extrem": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 0.9399999976158142,
+          "mean_last100": 0.9399999976158142,
+          "mean_last500": 0.9305000066757202,
+          "mean_first500": 0.030719500564038753,
+          "min": 0.0,
+          "max": 0.9599999785423279,
+          "has_nonfinite": true
+        },
+        "success_rate_dlp": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 0.8999999761581421,
+          "mean_last100": 0.9102000218629837,
+          "mean_last500": 0.9149800121784211,
+          "mean_first500": 0.2881783148050308,
+          "min": 0.0,
+          "max": 0.949999988079071,
+          "has_nonfinite": true
+        },
+        "step_num": {
+          "count": 36501,
+          "last_step": 36500,
+          "last_value": 12.0,
+          "mean_last100": 39.32,
+          "mean_last500": 43.14,
+          "mean_first500": 127.354,
+          "min": 1.0,
+          "max": 200.0,
+          "has_nonfinite": false
+        }
+      }
+    }
+  },
+  "external_eval_reference": {
+    "around_36_5k_checkpoint": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260617_233812\\SAC_35999.pt",
+    "eval_episode": 200,
+    "success_rate_Normal": 1.0,
+    "success_rate_Complex": 0.985,
+    "success_rate_Extrem": 0.915,
+    "success_rate_DLP": 0.955,
+    "mean_success": 0.96375,
+    "source": "docs/research/2026-06-17-stage3-baseline-resource-profile.md"
+  },
+  "gate_policy": {
+    "20k": "early-warning only; stop automatically only for catastrophic failure such as nonfinite losses, missing checkpoint, or severe multi-scene collapse",
+    "36_5k": "equivalence gate before allowing uninterrupted continuation to 100K; compare TensorBoard and matched 200-episode eval against baseline SAC_35999.pt"
+  }
+}
