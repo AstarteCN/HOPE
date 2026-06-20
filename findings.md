@@ -23,6 +23,9 @@
 
 - PRD written at `docs/superpowers/specs/2026-06-19-hope-stage3-safe-speed-20k-prd.md`.
 - The PRD locks baseline metrics for future 20K candidate comparisons: `12.964 h`, `1545.71` episodes/hour, `39.10` environment steps/second, average process CPU `37.76%`, average whole-GPU `29.42%`, and external eval Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`.
+- Fast action-mask 20K candidate result: run `D:\Github\HOPE\src\log\exp\sac_20260620_085208` reached `SAC_19999.pt` and passed the saved command-only 20K gates. Corrected time-to-checkpoint speed was `10.947863 h`, `1826.840564` episodes/hour, and `46.223481` environment steps/second, improving over the command-only 20K baseline by `15.55%`, `18.19%`, and `18.22%` respectively.
+- Fast action-mask 20K matched external eval exactly equaled the command-only 20K baseline: Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`. This supports "no observed 20K quality regression" for the default-off fast action-mask path when enabled through the opt-in wrapper.
+- Compared with the stopped 36.5K baseline reference Normal `1.000`, Complex `0.985`, Extrem `0.915`, DLP `0.955`, mean `0.96375`, the fast action-mask 20K checkpoint remains lower mainly on Extrem and mean success. This is a 20K maturity caveat, not a 36.5K equivalence claim.
 - The PRD defines candidate labels: `pass`, `quality-pass-speed-neutral`, `investigate`, and `reject`.
 - The PRD defines the 20K quality gate as external eval mean at least `0.85625`, Normal at least `0.95`, Complex at least `0.90`, Extrem at least `0.58`, DLP at least `0.91`, finite losses, and no new multi-scene collapse pattern.
 - The PRD defines the 20K speed gate as at least `10%` improvement in wall-clock time to 20K, environment steps/second, or episodes/hour when episode-rate gain is not explained by lower policy quality.
@@ -213,6 +216,7 @@
 | Bounded profile shows fast action mask lowers env-step cost | In command-only env-step diagnostics, action-mask average cost changed from `1.694 ms` to `0.821 ms`, and `env.step` average changed from `9.345 ms` to `8.205 ms`. This is measurement-only evidence for 20K candidate admission, not a quality result. |
 | Fast action mask needs an explicit training entry point | The optimized `ActionMask` branch is default-off by design, so a direct call to `src/train/train_HOPE_sac.py` would not test the optimization. The 20K candidate must use the opt-in wrapper `tools/stage3/train_HOPE_sac_fast_action_mask.py` via `launch_stage3_20k.ps1 -FastActionMask`. |
 | Fast candidate resource CSV has startup parent-PID rows | The Windows venv launcher PID `29844` spawned actual training child PID `3696`. Resource monitoring was restarted against PID `3696`; the initial parent-PID rows in `stage3_fast_action_mask_20k_20260620_085206.resources.csv` should be caveated or excluded when interpreting process CPU/RAM, while whole-GPU samples remain coarse device-level values. |
+| Promote fast action mask from admitted candidate to passed 20K speed candidate | The 20K run improved checkpoint-time throughput by more than the `10%` gate while preserving matched 20K external eval quality. The change remains opt-in and default-off, and a longer 36.5K/100K run would still be needed before making stronger reproduction-equivalence claims. |
 
 ## Issues Encountered
 
@@ -222,6 +226,7 @@
 | `HOPE_SAC0.pt` failed to load under PyTorch 2.11 default `weights_only=True`; error reported unsupported global `model.agent.sac_agent.SACConfig`. | Treat the repository checkpoint as trusted and rerun the command with `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` to preserve the original source code path. |
 | Stage 3 resource monitor exited while training continued. | Made the external monitor append-safe and restarted it against the same CSV without touching original HOPE training, environment, or model source. |
 | `tensorboard_stage3_summary.py` was mistakenly called with `--run-dir`, and the resource CSV was initially read with a non-existent `cpu_percent_normalized` field. | Use the script's positional `log_dir` argument and read the monitor CSV's `cpu_percent` column for CPU summaries. |
+| `stop_stage3_at_20k.ps1` rejected the fast candidate child PID after checkpoint creation because PowerShell `ConvertFrom-Json` date conversion shifted UTC/local semantics in the process-window safety check. | Used an equivalent manual fallback guard based on PID, process name, command-line fragments, and checkpoint/episode presence. The workload and resource monitor had already exited naturally, so no logs or checkpoints were lost. |
 
 ## Resources
 
@@ -234,3 +239,17 @@
 ## Visual/Browser Findings
 
 - No browser or image findings in this stage so far.
+
+## OGM Integration Research Refresh - 2026-06-20
+
+- This pass is research-only and must respect the repository's current AGENTS.md boundary: do not introduce OGM-specific source code until the original HOPE baseline is understood/reproduced and the user explicitly approves Stage 4.
+- Existing OGM research notes and the old implementation plan are useful starting points, but they predate the Stage 3 safe-speed tooling, the command-only 20K gate, and the default-off fast action-mask candidate.
+- The current code state makes a stronger integration rule possible: any future OGM work should be a separate opt-in experiment entry point with its own 20K/long-run gates, while the original HOPE SAC path and current safe-speed framework remain the comparison anchor.
+- Current Stage 3 context still argues against replacing HOPE's action mask, curriculum, scene scheduling, reward semantics, or hybrid Reeds-Shepp switching during the first OGM step. The first OGM design should change observation representation, not the planner contract.
+- New research note written to `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`.
+- Paper/code conclusion: the OGM paper keeps the HOPE-like hybrid RL plus RS plus action-mask structure; the new contribution is LiDAR/IMU-derived OGM perception alignment between simulation training and real inference.
+- The first approved OGM variant should use an explicit `ogm` modality, likely `target + action_mask + ogm` as policy inputs, while keeping lidar available as an internal helper for the current action-mask calculation. Removing lidar/mask entirely should be a later strict-OGM experiment.
+- Recommended proxy OGM grid: 64x64 with roughly 0.3125-0.3333 m/cell so the local crop covers about the current 64px BEV span and 10m lidar radius. The older 0.2 m/cell assumption is probably too narrow for a first HOPE-compatible local crop.
+- Code trap: adding `ogm` to `observation_shape` also requires extending `StateNorm.DEFAULT_UPDATE_MODAL` with `ogm: False`; otherwise SAC state normalization can break on the new key.
+- Code trap: OGM runner configs should copy `ACTOR_CONFIGS` and `CRITIC_CONFIGS` before mutating `n_modal`, `img_shape`, or `ogm_shape`, because these are global dictionaries in `configs.py`.
+- Tooling conclusion: future OGM runs should reuse the Stage 3 manifest/report/gate style rather than launching unmanaged ad hoc training runs.

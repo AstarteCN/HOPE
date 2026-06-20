@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 10 fast action mask 20K candidate launch in progress
+Phase 10 fast action mask 20K candidate complete; candidate passed 20K speed and quality gates
 
 ## Phases
 
@@ -117,8 +117,8 @@ Phase 10 fast action mask 20K candidate launch in progress
 - [x] Reassign manifest workload PID from the venv launcher parent to the actual child Python training process.
 - [x] Restart the resource monitor against the actual child training PID.
 - [x] Set continuous monitor automation for the candidate run.
-- [ ] At/after 20K and `SAC_19999.pt`, stop the run, summarize TensorBoard/resource metrics, evaluate candidate checkpoint, and compare against saved 20K and 36.5K baselines.
-- **Status:** running under monitor automation `hope-fast-action-mask-20k-monitor`.
+- [x] At/after 20K and `SAC_19999.pt`, stop the run, summarize TensorBoard/resource metrics, evaluate candidate checkpoint, and compare against saved 20K and 36.5K baselines.
+- **Status:** complete. The fast action-mask candidate passed the 20K speed and quality gates against the command-only 20K baseline: `10.947863 h` to checkpoint, `1826.840564` episodes/hour, `46.223481` env steps/second, and matched 200-episode external eval Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`. This is a 20K smoke-quality result, not a 36.5K equivalence proof.
 
 ## Key Questions
 
@@ -171,6 +171,7 @@ Phase 10 fast action mask 20K candidate launch in progress
 | Treat fast action mask as an admitted candidate, not a validated training speedup | Bounded diagnostics show action-mask average cost dropped from `1.694 ms` to `0.821 ms`, but the change still needs a future 20K gated run against the command-only 20K baseline before it can be called safe for training. |
 | Fast action-mask 20K run launched from a clean Git state | Manifest `src/log/exp/stage3_fast_action_mask_20k_20260620_085206.meta.json` records clean branch status at launch, run dir `src/log/exp/sac_20260620_085208`, command-only flags, and `fast_action_mask=true`. |
 | Reassign fast candidate monitor to the actual Python child PID | The venv launcher parent PID `29844` spawned child PID `3696`, which writes TensorBoard and consumes resources. Manifest and resource monitor were updated to track PID `3696`; the first few resource CSV rows for PID `29844` should be treated as startup-only monitor bias. |
+| Fast action mask passed the 20K candidate gate | Against the saved command-only 20K baseline, the fast action-mask candidate improved time to checkpoint by `15.55%`, episodes/hour by `18.19%`, and env steps/second by `18.22%`, while matched 200-episode external eval was identical. Keep the 36.5K comparison as a maturity caveat, not an equivalence claim. |
 
 ## Errors Encountered
 
@@ -182,9 +183,11 @@ Phase 10 fast action mask 20K candidate launch in progress
 | Micro-profile command used the wrong `.venv` relative path from `src` | 1 | Reran with absolute interpreter path `D:\Github\HOPE\.venv\Scripts\python.exe`. |
 | Render-mode parity script compared `OrderedDict` reward keys instead of values | 1 | Reran the check using `reward.values()`; Normal, Complex, Extrem, and DLP scripted cases matched exactly. |
 | `git commit` for the PRD failed because Git author identity is not configured | 1 | Historical note: unstaged the PRD after the failed commit and left it as a normal working-tree file for user review at that moment; the PRD was later accepted and converted into the safe-speed framework plan. Do not set `user.name` or `user.email` without user approval. |
+| `stop_stage3_at_20k.ps1` rejected the reassigned child PID because PowerShell `ConvertFrom-Json` shifted manifest timestamps through local/UTC semantics | 1 | Used a manual fallback with equivalent PID/name/command-line validation; workload and resource monitor were already inactive after natural finish, and the manifest records the fallback reason. |
 
 ## Notes
 
 - Do not modify original HOPE source files during Stage 3 performance/resource work unless the user explicitly approves a separate source-change plan. The 2026-06-19 approved exception is the default-off `ActionMask.get_steps` fast path in `src/model/action_mask.py`.
 - Do not install into global Python.
 - Do not run OGM implementation work in this stage.
+- 2026-06-20 OGM integration research refresh was recorded in `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`; it is research-only and does not change the current Phase 10 run status.

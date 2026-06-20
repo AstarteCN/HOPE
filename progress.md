@@ -458,7 +458,7 @@
 
 ### Phase 10: Fast Action Mask 20K Candidate Run
 
-- **Status:** running under heartbeat monitor automation `hope-fast-action-mask-20k-monitor`.
+- **Status:** complete; passed 20K speed and quality gates against the saved command-only 20K baseline.
 - **Started:** 2026-06-20
 - Actions taken:
   - Recovered planning context and confirmed branch `codex/stage3-resource-study` was clean before new changes.
@@ -482,3 +482,31 @@
   - TensorBoard initial live summary reached 52 episodes and 6,222 env steps; `hard_reject_has_nonfinite=False`.
   - Opened TensorBoard in the in-app browser at `http://127.0.0.1:6006/?darkMode=true#timeseries&runSelectionState=eyJzYWNfMjAyNjA2MjBfMDg1MjA4Ijp0cnVlfQ%3D%3D`.
   - Created heartbeat monitor automation `hope-fast-action-mask-20k-monitor` at 15-minute intervals.
+  - Monitored the run until TensorBoard reached 20,000 episodes and `src/log/exp/sac_20260620_085208/SAC_19999.pt` existed.
+  - Attempted `tools/stage3/stop_stage3_at_20k.ps1`; the stop script rejected the reassigned child PID because PowerShell `ConvertFrom-Json` shifted manifest timestamps through local/UTC semantics in the process-window safety check.
+  - Used a manual fallback with equivalent PID/name/command-line validation. The workload PID `3696` and resource monitor PID `19300` were already inactive after natural finish, with logs and checkpoints preserved.
+  - Recomputed speed metrics with Python raw JSON timestamp parsing to avoid the same UTC/local conversion problem.
+  - Ran matched 200-episode external evaluation for `SAC_19999.pt`; result: Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`.
+  - Compared against the command-only 20K baseline using `tools/stage3/compare_stage3_20k.py`; decision `pass`.
+  - Final speed gate metrics to 20K checkpoint: `10.947863 h`, `1826.840564` episodes/hour, `46.223481` env steps/second; improvements over baseline were `15.55%`, `18.19%`, and `18.22%`.
+  - Resource summary used 8,060 samples: average process CPU `39.67%`, average whole-GPU utilization `32.22%`, average GPU memory used `3130.39 MB`, peak GPU memory `3643 MB`.
+  - Wrote comparison artifacts:
+    - `docs/research/stage3_fast_action_mask_20k_candidate_20260620.comparison.json`
+    - `docs/research/2026-06-20-stage3-fast-action-mask-20k-candidate-report.md`
+  - Compared to the stopped 36.5K baseline only as a maturity caveat: the 20K candidate is lower on Extrem and mean success, but it exactly matches the saved 20K baseline, so this is not treated as a fast action-mask regression.
+  - Verified this run did not require modifying original `src/train` or `src/env` files; the fast action-mask behavior remains opt-in through the wrapper and default-off in normal code paths.
+
+### OGM Integration Research Refresh
+
+- **Status:** in progress.
+- **Started:** 2026-06-20 11:35:54 +08:00
+- Actions taken:
+  - Read current AGENTS.md instructions from the user message, root planning context, recent Stage 3 findings, and the previous RL-OGM research and implementation plan.
+  - Confirmed this pass is research-only: no OGM source implementation should begin while Stage 3 baseline/safe-speed validation remains active, unless the user explicitly approves Stage 4.
+  - Confirmed current repository state has a running fast action-mask 20K candidate and one untracked handoff document under `docs/research/`.
+  - Identified existing OGM notes as useful but stale relative to the current code state because Stage 3 tooling, fast action-mask opt-in code, and 20K gate workflow now exist.
+  - Extracted text from both local PDFs with `pypdf`; `pdfinfo.exe` was not available in the bundled bin path, but text extraction and `pdfplumber` table extraction worked.
+  - Re-read current HOPE source attachment points: `CarParking`, `CarParkingWrapper`, `LidarSimlator`, `ActionMask`, `MultiObsEmbedding`, `SACAgent`, `StateNorm`, `ReplayMemory`, `train_HOPE_sac.py`, `eval_utils.py`, and Stage 3 tooling.
+  - Wrote `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`.
+  - Appended current OGM integration findings to `findings.md`.
+  - Added a root `task_plan.md` note that the OGM refresh is research-only and does not change the active Phase 10 run status.

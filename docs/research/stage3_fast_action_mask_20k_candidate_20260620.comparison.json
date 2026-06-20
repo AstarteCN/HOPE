@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "decision": "pass",
+  "baseline_id": "stage3_command_only_20k_20260619",
+  "baseline": {
+    "id": "stage3_command_only_20k_20260619",
+    "run_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260619_004316",
+    "checkpoint": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260619_004316\\SAC_19999.pt",
+    "stop_episode_snapshot": 20038,
+    "env_steps": 1824904,
+    "wall_time_hours": 12.964,
+    "episodes_per_hour": 1545.71,
+    "env_steps_per_second": 39.1,
+    "resource_profile": {
+      "avg_process_cpu_percent": 37.76,
+      "avg_whole_gpu_util_percent": 29.42
+    },
+    "tensorboard": {
+      "avg_reward": {
+        "latest": 0.076828,
+        "recent_mean": 0.061052
+      },
+      "actor_loss": {
+        "latest": -0.471469,
+        "recent_mean": -0.543129
+      },
+      "critic_loss": {
+        "latest": 0.080817,
+        "recent_mean": 0.10388
+      },
+      "success_rate_Normal": {
+        "latest": 1.0,
+        "recent_mean": 1.0
+      },
+      "success_rate_Complex": {
+        "latest": 0.94,
+        "recent_mean": 0.94
+      },
+      "success_rate_Extrem": {
+        "latest": 0.69,
+        "recent_mean": 0.7108
+      },
+      "success_rate_dlp": {
+        "latest": 0.82,
+        "recent_mean": 0.7924
+      },
+      "step_num": {
+        "latest": 52.0,
+        "recent_mean": 77.22
+      }
+    },
+    "external_eval": {
+      "Normal": 0.985,
+      "Complex": 0.945,
+      "Extrem": 0.655,
+      "DLP": 0.96,
+      "mean": 0.88625
+    }
+  },
+  "candidate": {
+    "candidate_type": "fast_action_mask_20k_validation",
+    "run_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_20260620_085208",
+    "changed_knobs": {
+      "eval_episode": 200,
+      "command_only_flags": {
+        "visualize": "",
+        "verbose": ""
+      },
+      "train_episode": 20000,
+      "fast_action_mask": true
+    }
+  },
+  "command": [
+    "D:\\Github\\HOPE\\.venv\\Scripts\\python.exe",
+    "D:\\Github\\HOPE\\tools\\stage3\\train_HOPE_sac_fast_action_mask.py",
+    "--train_episode",
+    "20000",
+    "--eval_episode",
+    "200",
+    "--visualize=",
+    "--verbose="
+  ],
+  "parity_status": "pass",
+  "checkpoint_missing": false,
+  "speed": {
+    "candidate_metrics": {
+      "wall_time_hours": 10.947863,
+      "episodes_per_hour": 1826.840564,
+      "env_steps_per_second": 46.223481
+    },
+    "speed_pass": true,
+    "wall_time_improvement_ratio": 0.1555181271212589,
+    "episodes_per_hour_improvement_ratio": 0.1818779486449593,
+    "env_steps_per_second_improvement_ratio": 0.18218621483375955
+  },
+  "quality": {
+    "quality_pass": true,
+    "mean_success": 0.88625,
+    "mean_pass": true,
+    "per_scene_pass": {
+      "Normal": true,
+      "Complex": true,
+      "Extrem": true,
+      "DLP": true
+    },
+    "hard_reject_reasons": []
+  },
+  "scene_eval": {
+    "success": {
+      "Normal": 0.985,
+      "Complex": 0.945,
+      "Extrem": 0.655,
+      "DLP": 0.96
+    },
+    "mean_success": 0.88625
+  },
+  "tensorboard": {
+    "has_nonfinite": true,
+    "hard_reject_has_nonfinite": false,
+    "nonfinite_scalar_tags": [
+      "success_rate_Complex",
+      "success_rate_Extrem",
+      "success_rate_dlp"
+    ],
+    "hard_reject_nonfinite_scalar_tags": [],
+    "core_scene_collapse_reasons": [],
+    "multi_scene_collapse": false,
+    "low_scene_success_tags": [],
+    "low_scene_success_values": {}
+  },
+  "resource_profile": {
+    "path": "D:\\Github\\HOPE\\src\\log\\exp\\stage3_fast_action_mask_20k_20260620_085206.resources.csv",
+    "sample_count": 8060,
+    "avg_process_cpu_percent": 39.66741811414392,
+    "max_process_cpu_percent": 49.0,
+    "avg_working_set_mb": 3633.333547146402,
+    "max_working_set_mb": 4784.12,
+    "avg_private_memory_mb": 7333.532604218362,
+    "max_private_memory_mb": 8929.29,
+    "avg_whole_gpu_util_percent": 32.22158808933003,
+    "max_whole_gpu_util_percent": 100.0,
+    "avg_gpu_power_w": 35.47492679900744,
+    "avg_gpu_memory_used_mb": 3130.3939205955335,
+    "max_gpu_memory_used_mb": 3643.0,
+    "avg_gpu_memory_total_mb": 16376.0,
+    "max_gpu_memory_total_mb": 16376.0,
+    "max_gpu_power_w": 57.91
+  }
+}
