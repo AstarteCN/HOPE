@@ -568,3 +568,26 @@
   - Added `tools/stage4/launch_stage4_ogm.ps1` to launch the Stage 4 OGM training wrapper, resource monitor, stdout/stderr logs, and manifest metadata under `src/log/exp`.
   - Added `tools/stage4/monitor_stage4_ogm_progress.ps1` to export TensorBoard gate summaries and verify the expected `SAC_<gate-1>.pt` checkpoint exists.
   - Verified both PowerShell scripts parse with `[scriptblock]::Create(...)`.
+
+### Stage 4 OGM Proxy Plumbing And 1K Diagnostic
+
+- **Status:** complete; proceed to 20K first gate.
+- **Started:** 2026-06-20
+- Actions taken:
+  - Implemented Stage 4 OGM Tasks 2-8: proxy OGM rasterizer, default-off OGM observation integration, explicit OGM network/state-normalization support, fixed OGM-style eval cases, OGM eval metrics, progress gates, and an opt-in OGM SAC runner.
+  - Fixed Task 8 runner artifact paths so OGM runs write under `D:\Github\HOPE\src\log\exp`, matching existing TensorBoard and monitor expectations.
+  - Added explicit optional `--run_dir` support to the Stage 4 OGM runner so launch manifests can record a deterministic run directory.
+  - Added Task 9 launch/monitor wrappers and fixed them after review so `ChangedKnobsJson` is parsed before process launch, manifest `run_dir` is reliable, and gate monitor validates manifest/run-dir consistency.
+  - Ran Stage 4 unit tests: 48 tests passed after the runner CWD fix.
+  - Ran Stage 3 regression tool tests: 38 tests passed.
+  - Ran a 20-episode direct OGM smoke from `D:\Github\HOPE`; the first attempt exposed the original HOPE `../data/dlp.data` CWD dependency, then passed after adding `ensure_src_working_directory()`.
+  - Wrote `docs/research/2026-06-20-stage4-ogm-proxy-smoke-report.md`.
+  - Launched the 1K OGM diagnostic with `tools/stage4/launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_1k -TrainEpisode 1000 -EvalEpisode 10`.
+  - Locked manifest: `D:\Github\HOPE\src\log\exp\stage4_ogm_proxy_1k_20260620_234404.meta.json`.
+  - Locked run directory: `D:\Github\HOPE\src\log\exp\sac_ogm_stage4_ogm_proxy_1k_20260620_234404`.
+  - Discovered the initial 1K resource monitor was attached to the venv Python shim PID `2116`, while actual training ran in child PID `16288`; manually retargeted the live monitor and updated the manifest.
+  - Fixed `tools/stage4/launch_stage4_ogm.ps1` so future launches automatically monitor the actual child Python PID and record `initial_workload_pid` plus `workload_pid_source`.
+  - The 1K diagnostic completed naturally at `episode_count=1000`, `env_step_count=131691`, with `training_budget_met=true` and `hard_reject_has_nonfinite=false`.
+  - TensorBoard scalars were all present and finite; `avg_reward` trend delta was positive, critic loss stayed finite, and no missing-scalar hard reject was observed.
+  - Trusted post-retarget resource samples: 309 samples, average process CPU `5.946%`, average whole-GPU utilization `35.013%`, peak GPU memory `3377 MB`.
+  - Wrote `docs/research/2026-06-20-stage4-ogm-proxy-1k-diagnostic.md`.

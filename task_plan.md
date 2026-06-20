@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Stage 4 OGM Proxy Task 1 implemented; awaiting the next Stage 4 execution task
+Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic. Next step: launch the 20K first gate against the accepted `hope-fast-action-mask-20k` baseline.
 
 ## Phases
 
@@ -138,12 +138,16 @@ Stage 4 OGM Proxy Task 1 implemented; awaiting the next Stage 4 execution task
 - [x] Add the user-requested validation policy: first gate at 20K episodes against `hope-fast-action-mask-20k`, then every-10K monitoring with one 10K grace window before stopping stagnant or degrading runs.
 - [x] Select execution mode for Task 1: Inline Execution by direct user request.
 - [x] Add Stage 4 target constants and the first progress-gate baseline test.
-- [ ] Implement proxy OGM rasterizer.
-- [ ] Integrate default-off OGM observation into the environment and wrapper.
-- [ ] Add explicit OGM network/config/state-normalization support.
-- [ ] Add fixed OGM-style simulation evaluation set, OGM eval metrics, progress gates, and launch/monitor tooling.
-- [ ] Run 1K, 20K, and every-10K gated validation ladder.
-- **Status:** Task 1 implemented. Stage 4 now has target constants, OGM paper simulation target bands, and the accepted `hope-fast-action-mask-20k` baseline recorded under `tools/stage4/`.
+- [x] Implement proxy OGM rasterizer.
+- [x] Integrate default-off OGM observation into the environment and wrapper.
+- [x] Add explicit OGM network/config/state-normalization support.
+- [x] Add fixed OGM-style simulation evaluation set, OGM eval metrics, progress gates, and launch/monitor tooling.
+- [x] Add an opt-in Stage 4 OGM SAC runner that uses policy inputs `target + action_mask + ogm` while keeping lidar internal for action-mask generation.
+- [x] Validate Stage 4 plumbing with Stage 4/Stage 3 unit tests and a 20-episode OGM smoke.
+- [x] Run the 1K diagnostic and confirm finite TensorBoard scalars, valid run/manifest/resource artifacts, and no process failure.
+- [ ] Run the 20K first gate against `hope-fast-action-mask-20k`.
+- [ ] Continue every-10K gated validation ladder only while trend remains promising.
+- **Status:** 1K diagnostic complete. OGM training plumbing is healthy enough to proceed to the 20K first gate. The 1K run reached 1000 episodes, `131691` env steps, finite actor/critic losses, and `hard_reject_has_nonfinite=false`.
 
 ## Key Questions
 

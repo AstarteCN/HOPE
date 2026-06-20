@@ -278,3 +278,14 @@
 - Code trap: adding `ogm` to `observation_shape` also requires extending `StateNorm.DEFAULT_UPDATE_MODAL` with `ogm: False`; otherwise SAC state normalization can break on the new key.
 - Code trap: OGM runner configs should copy `ACTOR_CONFIGS` and `CRITIC_CONFIGS` before mutating `n_modal`, `img_shape`, or `ogm_shape`, because these are global dictionaries in `configs.py`.
 - Tooling conclusion: future OGM runs should reuse the Stage 3 manifest/report/gate style rather than launching unmanaged ad hoc training runs.
+
+## Stage 4 OGM Proxy Execution Findings - 2026-06-20
+
+- The Stage 4 OGM proxy pipeline now has a default-off `ogm` observation path, explicit OGM actor/critic config support, a fixed `20 parallel + 50 perpendicular` simulation evaluation set, progress-gate utilities, and opt-in OGM training/launch wrappers.
+- The first OGM policy input contract is `target + action_mask + ogm`; RGB BEV is excluded from the OGM policy, while lidar remains available internally for the existing HOPE action-mask generator.
+- Direct runner execution from `D:\Github\HOPE` exposed the original HOPE current-working-directory dependency: `ParkingMapDLP` opens `../data/dlp.data`. The OGM runner now normalizes CWD to `D:\Github\HOPE\src` before constructing the environment.
+- Windows `.venv\Scripts\python.exe` can spawn a child Python process for actual training. Stage 4 launcher now records `initial_workload_pid`, resolves the child Python PID when present, records it as `workload_pid`, and starts the resource monitor against that actual PID.
+- The 1K OGM diagnostic run completed with `episode_count=1000`, `env_step_count=131691`, `training_budget_met=true`, no missing TensorBoard scalars, and `hard_reject_has_nonfinite=false`.
+- The 1K diagnostic produced finite `actor_loss`, `critic_loss`, `alpha`, `avg_reward`, and `step_num` scalars. This is a plumbing/health result only, not a quality or paper-reproduction result.
+- Trusted post-retarget resource samples from the 1K diagnostic show average process CPU about `5.95%`, average whole-GPU utilization about `35.01%`, and peak GPU memory about `3377 MB`.
+- PyTorch emitted a replay sampling performance warning for constructing a tensor from a list of NumPy arrays in `src\model\agent\sac_agent.py`; this is not a Stage 4 correctness blocker, but it is a likely future throughput investigation point if OGM long-run speed is poor.

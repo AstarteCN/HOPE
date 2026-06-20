@@ -1,0 +1,263 @@
+{
+  "log_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_ogm_stage4_ogm_proxy_1k_20260620_234404",
+  "event_dir": "D:\\Github\\HOPE\\src\\log\\exp\\sac_ogm_stage4_ogm_proxy_1k_20260620_234404",
+  "min_episodes": 1000,
+  "episode_count": 1000,
+  "training_budget_met": true,
+  "env_step_count": 131691,
+  "estimated_sac_updates_after_warmup": 12145,
+  "missing_scalars": [],
+  "scalars": {
+    "total_reward": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": 5.862369537353516,
+      "last_value": 5.5178728103637695,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 1.953887856822461,
+      "mean_last100": 2.6605539082968606,
+      "mean_last500": 2.4837811742467166,
+      "trend": {
+        "first_mean": 0.9187447446584701,
+        "last_mean": 2.2253730096388606,
+        "delta": 1.3066282649803904
+      },
+      "min": -6.319822311401367,
+      "max": 6.347952365875244,
+      "mean": 2.2188345155345885
+    },
+    "avg_reward": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": 0.05804326385259628,
+      "last_value": 0.026392538100481033,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 0.014866564170457423,
+      "mean_last100": 0.02435562494036276,
+      "mean_last500": 0.020305624726694078,
+      "trend": {
+        "first_mean": 0.009839655025862157,
+        "last_mean": 0.01612533609033562,
+        "delta": 0.006285681064473464
+      },
+      "min": -0.019196191802620888,
+      "max": 0.06368353962898254,
+      "mean": 0.01758609444857575
+    },
+    "actor_loss": {
+      "count": 607,
+      "first_step": 86,
+      "last_step": 998,
+      "first_value": 0.02664119005203247,
+      "last_value": -0.49679118394851685,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": -0.2112670042756945,
+      "mean_last100": -0.3883056816458702,
+      "mean_last500": -0.2603073806334287,
+      "trend": {
+        "first_mean": -0.13062206156551837,
+        "last_mean": -0.41338299691677094,
+        "delta": -0.2827609353512526
+      },
+      "min": -0.7517157793045044,
+      "max": 0.0867350846529007,
+      "mean": -0.24157193823083867
+    },
+    "critic_loss": {
+      "count": 607,
+      "first_step": 86,
+      "last_step": 998,
+      "first_value": 0.047548793256282806,
+      "last_value": 0.04703424125909805,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 0.053189892215654254,
+      "mean_last100": 0.05711714868433773,
+      "mean_last500": 0.0480850071106106,
+      "trend": {
+        "first_mean": 0.1335146584920585,
+        "last_mean": 0.06247832493856549,
+        "delta": -0.07103633355349302
+      },
+      "min": 0.0061156125739216805,
+      "max": 0.9920406341552734,
+      "mean": 0.05366453920265497
+    },
+    "action_std0": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": -0.0,
+      "last_value": 0.021287735551595688,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 0.005992033846187951,
+      "mean_last100": 0.02134551279246807,
+      "mean_last500": 0.01942574734427035,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": 0.02129246186465025,
+        "delta": 0.02129246186465025
+      },
+      "min": -2.434200723655522e-05,
+      "max": 0.021766595542430878,
+      "mean": 0.01270889059522915
+    },
+    "action_std1": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": -0.0,
+      "last_value": -0.018952498212456703,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": -0.002804692984236681,
+      "mean_last100": -0.017737829443067312,
+      "mean_last500": -0.012820474001578987,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": -0.01831939309835434,
+        "delta": -0.01831939309835434
+      },
+      "min": -0.018952498212456703,
+      "max": 2.0429521100595593e-05,
+      "mean": -0.007812583492907834
+    },
+    "alpha": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": 0.009999999776482582,
+      "last_value": 0.009413504041731358,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 0.009883885001763702,
+      "mean_last100": 0.009444308346137404,
+      "mean_last500": 0.009567942403256893,
+      "trend": {
+        "first_mean": 0.009999999776482582,
+        "last_mean": 0.009428961165249349,
+        "delta": -0.0005710386112332336
+      },
+      "min": 0.009413504041731358,
+      "max": 0.009999999776482582,
+      "mean": 0.009725913702510297
+    },
+    "success_rate_Normal": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": 1.0,
+      "last_value": 0.7300000190734863,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 0.7351722096204758,
+      "mean_last100": 0.7150000071525574,
+      "mean_last500": 0.7293599988222123,
+      "trend": {
+        "first_mean": 0.8759991121292114,
+        "last_mean": 0.7125999987125397,
+        "delta": -0.1633991134166718
+      },
+      "min": 0.6666666865348816,
+      "max": 1.0,
+      "mean": 0.732266104221344
+    },
+    "success_rate_Complex": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": null,
+      "last_value": 0.6499999761581421,
+      "has_nan_or_inf": true,
+      "has_nonfinite": true,
+      "mean_first500": 0.5377898806333542,
+      "mean_last100": 0.6403999876976013,
+      "mean_last500": 0.597579999923706,
+      "trend": {
+        "first_mean": 0.5535904145240784,
+        "last_mean": 0.6471999835968018,
+        "delta": 0.09360956907272333
+      },
+      "min": 0.0,
+      "max": 0.75,
+      "mean": 0.5676726129081275
+    },
+    "success_rate_Extrem": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": null,
+      "last_value": 0.12999999523162842,
+      "has_nan_or_inf": true,
+      "has_nonfinite": true,
+      "mean_first500": 0.0594611861333251,
+      "mean_last100": 0.13839999973773956,
+      "mean_last500": 0.11592000070214271,
+      "trend": {
+        "first_mean": 0.0,
+        "last_mean": 0.13539999812841416,
+        "delta": 0.13539999812841416
+      },
+      "min": 0.0,
+      "max": 0.1599999964237213,
+      "mean": 0.08772604550815417
+    },
+    "success_rate_dlp": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": null,
+      "last_value": 0.46000000834465027,
+      "has_nan_or_inf": true,
+      "has_nonfinite": true,
+      "mean_first500": 0.303235396027565,
+      "mean_last100": 0.4670999950170517,
+      "mean_last500": 0.43703999519348147,
+      "trend": {
+        "first_mean": 0.128572319149971,
+        "last_mean": 0.4587999963760376,
+        "delta": 0.3302276772260666
+      },
+      "min": 0.0,
+      "max": 0.47999998927116394,
+      "mean": 0.37008795952246926
+    },
+    "step_num": {
+      "count": 1000,
+      "first_step": 0,
+      "last_step": 999,
+      "first_value": 101.0,
+      "last_value": 10.0,
+      "has_nan_or_inf": false,
+      "has_nonfinite": false,
+      "mean_first500": 131.41,
+      "mean_last100": 123.47,
+      "mean_last500": 131.972,
+      "trend": {
+        "first_mean": 118.98,
+        "last_mean": 138.76,
+        "delta": 19.779999999999987
+      },
+      "min": 6.0,
+      "max": 200.0,
+      "mean": 131.691
+    }
+  },
+  "nonfinite_scalar_tags": [
+    "success_rate_Complex",
+    "success_rate_Extrem",
+    "success_rate_dlp"
+  ],
+  "hard_reject_nonfinite_scalar_tags": [],
+  "hard_reject_has_nonfinite": false,
+  "warnings": [
+    "success_rate_Extrem remains below 0.2 at the end of the run"
+  ],
+  "has_nonfinite": true
+}
