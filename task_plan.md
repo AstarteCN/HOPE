@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 10 fast action mask 20K candidate complete; candidate passed 20K speed and quality gates
+Stage 4 OGM Proxy PRD written; awaiting user review
 
 ## Phases
 
@@ -118,7 +118,18 @@ Phase 10 fast action mask 20K candidate complete; candidate passed 20K speed and
 - [x] Restart the resource monitor against the actual child training PID.
 - [x] Set continuous monitor automation for the candidate run.
 - [x] At/after 20K and `SAC_19999.pt`, stop the run, summarize TensorBoard/resource metrics, evaluate candidate checkpoint, and compare against saved 20K and 36.5K baselines.
-- **Status:** complete. The fast action-mask candidate passed the 20K speed and quality gates against the command-only 20K baseline: `10.947863 h` to checkpoint, `1826.840564` episodes/hour, `46.223481` env steps/second, and matched 200-episode external eval Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`. This is a 20K smoke-quality result, not a 36.5K equivalence proof.
+- **Status:** milestone accepted. The fast action-mask candidate passed the 20K speed and quality gates against the command-only 20K baseline: `10.947863 h` to checkpoint, `1826.840564` episodes/hour, `46.223481` env steps/second, and matched 200-episode external eval Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`. On 2026-06-20 the user confirmed this speedup and quality result as accepted, and `hope-fast-action-mask-20k` is now the local baseline for future work.
+
+### Phase 11: OGM Integration PRD Brainstorming
+
+- [x] Read the current OGM integration research report.
+- [x] Record the accepted fast action-mask 20K milestone as the current Stage 3 baseline.
+- [x] Clarify the first OGM product scope and reproduction target.
+- [x] Propose 2-3 OGM integration PRD approaches with trade-offs.
+- [x] Present the selected PRD design sections for user approval.
+- [x] Write the approved PRD/spec under `docs/superpowers/specs/`.
+- [ ] Wait for user review of `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`.
+- **Status:** PRD written and self-reviewed. Do not implement OGM source code until the user approves the written PRD and it is converted into an executable implementation plan.
 
 ## Key Questions
 
@@ -172,6 +183,13 @@ Phase 10 fast action mask 20K candidate complete; candidate passed 20K speed and
 | Fast action-mask 20K run launched from a clean Git state | Manifest `src/log/exp/stage3_fast_action_mask_20k_20260620_085206.meta.json` records clean branch status at launch, run dir `src/log/exp/sac_20260620_085208`, command-only flags, and `fast_action_mask=true`. |
 | Reassign fast candidate monitor to the actual Python child PID | The venv launcher parent PID `29844` spawned child PID `3696`, which writes TensorBoard and consumes resources. Manifest and resource monitor were updated to track PID `3696`; the first few resource CSV rows for PID `29844` should be treated as startup-only monitor bias. |
 | Fast action mask passed the 20K candidate gate | Against the saved command-only 20K baseline, the fast action-mask candidate improved time to checkpoint by `15.55%`, episodes/hour by `18.19%`, and env steps/second by `18.22%`, while matched 200-episode external eval was identical. Keep the 36.5K comparison as a maturity caveat, not an equivalence claim. |
+| Close Stage 3 speed research at the accepted fast action-mask 20K milestone | On 2026-06-20 the user confirmed the fast action-mask 20K speedup and training quality as accepted. Future OGM work should use `hope-fast-action-mask-20k` as the local HOPE baseline anchor unless a later long-run supersedes it. |
+| Start OGM work as a PRD/design phase | The next goal is to translate paper/code research into a PRD for Stage 4 OGM integration. No OGM implementation should start until the PRD is approved and converted into a plan. |
+| Exclude OGM paper Real-World dataset KPI from current acceptance | Local repository inspection found only geometry-based `data/dlp.data`, not real OGM maps or sensor-derived OGM datasets. Current PRD acceptance should focus on available simulation KPIs unless a real OGM dataset is provided later. |
+| OGM first policy input scope is option A | The first PRD target uses `ogm + target + action_mask` as policy input, disables RGB BEV for the OGM policy, and keeps lidar internally only for existing HOPE action-mask generation. |
+| OGM evaluation dataset scope is option C | Hard acceptance should use a new OGM-style fixed `20 parallel + 50 perpendicular` simulation evaluation set, while HOPE Normal/Complex remain compatibility and regression metrics. |
+| OGM PRD route is方案 1: Proxy OGM First | Build a first-class proxy OGM observation path inside HOPE, enforce strict simulation KPI gates, and defer real-world OGM dataset acceptance until real OGM data exists. |
+| OGM Proxy PRD written for review | The approved brainstorming design was saved to `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`; the next step is user review, not implementation. |
 
 ## Errors Encountered
 

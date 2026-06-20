@@ -510,3 +510,25 @@
   - Wrote `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`.
   - Appended current OGM integration findings to `findings.md`.
   - Added a root `task_plan.md` note that the OGM refresh is research-only and does not change the active Phase 10 run status.
+
+### Stage 3 Milestone Closure And OGM PRD Brainstorming
+
+- **Status:** in progress.
+- **Started:** 2026-06-20
+- Actions taken:
+  - User confirmed the current speed research is complete for now and accepted the fast action-mask 20K candidate as a milestone.
+  - Recorded `hope-fast-action-mask-20k` as the current local baseline: speedup accepted and training quality accepted at the 20K gate.
+  - Confirmed next work should enter `superpowers:brainstorming` mode before writing an OGM PRD.
+  - Read `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`.
+  - Captured the new PRD target: use HOPE as the base, implement OGM paper core technical points into the main project, and target OGM-paper final values within `+-3%` using `100K +-20%` training episodes.
+  - Checked local data availability for real-world OGM dataset inputs. The repository currently only contains `data/dlp.data`, which is geometry-based DLP data, not real OGM maps or LiDAR/IMU-derived OGM tensors.
+  - User clarified that if no real-world OGM dataset is available, it should not be part of current acceptance. Current PRD acceptance should therefore focus on OGM paper simulation KPIs available from generated/proxy simulation scenarios.
+  - User selected first OGM policy-input scope option A: `ogm + target + action_mask` for policy input, no RGB BEV in policy, lidar retained internally for existing action-mask generation.
+  - User selected evaluation dataset scope option C: hard acceptance uses a new OGM-style fixed `20 parallel + 50 perpendicular` simulation eval set, and HOPE Normal/Complex remain compatibility/regression metrics.
+  - User selected KPI tolerance scope option A: all hard simulation KPIs use relative `+-3%` acceptance bands against the OGM paper values.
+  - User selected target representation scope option B: do not fix the current `cos(phi), cos(phi)` target representation in OGM PRD v1; record it as a separate known risk/future experiment.
+  - User selected PRD approach 1: Proxy OGM First with strict simulation KPI gates.
+  - Updated `task_plan.md` and `findings.md` to mark Stage 3 speed work as a milestone and open Phase 11 OGM PRD brainstorming.
+  - Presented five PRD design sections and received user confirmation for each: goals/acceptance, scope/non-goals, architecture/data flow, tests/gates, and deliverables/risks.
+  - Wrote `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`.
+  - Self-reviewed the PRD for placeholders, internal consistency, scope drift, and ambiguity; no implementation work was started.
