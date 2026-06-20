@@ -26,6 +26,24 @@ class OGMEnvironmentIntegrationTests(unittest.TestCase):
         finally:
             env.close()
 
+    def test_default_env_observation_does_not_include_ogm(self) -> None:
+        env = CarParking(render_mode="rgb_array", verbose=False)
+        try:
+            obs = env.reset(0, None, "Normal")
+            self.assertNotIn("ogm", obs)
+        finally:
+            env.close()
+
+    def test_default_wrapper_observation_does_not_include_ogm(self) -> None:
+        raw_env = CarParking(render_mode="rgb_array", verbose=False)
+        env = CarParkingWrapper(raw_env)
+        try:
+            obs = env.reset(0, None, "Normal")
+            self.assertNotIn("ogm", env.observation_shape)
+            self.assertNotIn("ogm", obs)
+        finally:
+            raw_env.close()
+
     def test_ogm_enabled_env_returns_hwc_ogm(self) -> None:
         env = CarParking(
             render_mode="rgb_array",

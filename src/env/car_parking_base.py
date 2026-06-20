@@ -419,7 +419,7 @@ class CarParking(gym.Env):
             self.clock = pygame.time.Clock()
 
         self._render(self.screen)
-        observation = {'img':None, 'lidar':None, 'target':None, 'action_mask':None, 'ogm':None}
+        observation = {'img':None, 'lidar':None, 'target':None, 'action_mask':None}
         if self.use_img_observation:
             raw_observation = self._get_img_observation(self.screen)
             observation['img'] = self._process_img_observation(raw_observation)
