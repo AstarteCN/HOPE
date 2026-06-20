@@ -121,6 +121,13 @@ def _local_to_world(ego_state: object, local_x: float, local_y: float) -> tuple[
     return float(world_x), float(world_y)
 
 
+def _cell_center_world(ego_state: object, row: int, col: int, config: OGMConfig) -> tuple[float, float]:
+    center = float(config.size) / 2.0
+    local_x = (float(col) + 0.5 - center) * float(config.resolution)
+    local_y = (center - float(row) - 0.5) * float(config.resolution)
+    return _local_to_world(ego_state, local_x, local_y)
+
+
 def _cell_footprint_world(ego_state: object, row: int, col: int, config: OGMConfig) -> Polygon:
     center = float(config.size) / 2.0
     resolution = float(config.resolution)

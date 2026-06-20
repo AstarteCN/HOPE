@@ -13,7 +13,7 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from env.ogm import OGMConfig, build_ego_ogm, world_to_grid  # noqa: E402
+from env.ogm import OGMConfig, _cell_center_world, build_ego_ogm, world_to_grid  # noqa: E402
 from env.vehicle import State  # noqa: E402
 
 
@@ -36,6 +36,17 @@ class ProxyOGMRasterizerTests(unittest.TestCase):
         row, col = world_to_grid(ego_state=ego, x=0.0, y=2.0, config=config)
         self.assertEqual(row, 32)
         self.assertGreater(col, 32)
+
+    def test_cell_center_world_maps_grid_center_to_world_coordinates(self) -> None:
+        config = OGMConfig(size=64, resolution=0.5, channels=2)
+        world_x, world_y = _cell_center_world(
+            ego_state=State([0.0, 0.0, 0.0]),
+            row=32,
+            col=32,
+            config=config,
+        )
+        self.assertAlmostEqual(world_x, 0.25)
+        self.assertAlmostEqual(world_y, -0.25)
 
     def test_build_ego_ogm_marks_obstacle_and_target_channels(self) -> None:
         config = OGMConfig(size=64, resolution=0.25, channels=2)
