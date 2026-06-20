@@ -10,11 +10,21 @@ $Python = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath '.ven
 $SummaryScript = Join-Path -Path $RepoRoot -ChildPath 'tools\stage3\tensorboard_stage3_summary.py'
 $GateJson = Join-Path -Path $RepoRoot -ChildPath "docs\research\stage4_ogm_gate_${GateEpisode}.tensorboard.json"
 $GateMd = Join-Path -Path $RepoRoot -ChildPath "docs\research\stage4_ogm_gate_${GateEpisode}.tensorboard.md"
+$ResolvedManifestPath = (Resolve-Path -LiteralPath $ManifestPath).Path
+$ResolvedRunDir = (Resolve-Path -LiteralPath $RunDir).Path
+$Meta = Get-Content -LiteralPath $ResolvedManifestPath -Raw | ConvertFrom-Json
 
-& $Python $SummaryScript $RunDir --min-episodes $GateEpisode --json $GateJson --markdown $GateMd
+if ($null -ne $Meta.run_dir -and -not [string]::IsNullOrWhiteSpace($Meta.run_dir)) {
+    $ManifestRunDir = (Resolve-Path -LiteralPath $Meta.run_dir).Path
+    if (-not [string]::Equals($ManifestRunDir, $ResolvedRunDir, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Manifest run_dir does not match supplied RunDir. Manifest: $ManifestRunDir Supplied: $ResolvedRunDir"
+    }
+}
+
+& $Python $SummaryScript $ResolvedRunDir --min-episodes $GateEpisode --json $GateJson --markdown $GateMd
 
 $checkpointEpisode = $GateEpisode - 1
-$checkpoint = Join-Path -Path $RunDir -ChildPath "SAC_${checkpointEpisode}.pt"
+$checkpoint = Join-Path -Path $ResolvedRunDir -ChildPath "SAC_${checkpointEpisode}.pt"
 if (-not (Test-Path -LiteralPath $checkpoint)) {
     throw "Expected checkpoint missing at gate ${GateEpisode}: $checkpoint"
 }

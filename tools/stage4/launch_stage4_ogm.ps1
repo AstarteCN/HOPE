@@ -7,6 +7,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$changedKnobs = $ChangedKnobsJson | ConvertFrom-Json -ErrorAction Stop
+
 $RepoRoot = (Resolve-Path -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath '..\..')).Path
 $SrcDir = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath 'src')).Path
 $Python = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath '.venv\Scripts\python.exe')).Path
@@ -21,6 +23,7 @@ $env:TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD = '1'
 $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $safeRunName = $RunName -replace '[^A-Za-z0-9_.-]', '_'
 $prefix = "${safeRunName}_${stamp}"
+$RunDir = Join-Path -Path $ExpDir -ChildPath "sac_ogm_${prefix}"
 $stdout = Join-Path -Path $ExpDir -ChildPath "$prefix.stdout.log"
 $stderr = Join-Path -Path $ExpDir -ChildPath "$prefix.stderr.log"
 $resourceCsv = Join-Path -Path $ExpDir -ChildPath "$prefix.resources.csv"
@@ -30,6 +33,7 @@ $args = @(
     $TrainScript,
     '--train_episode', "$TrainEpisode",
     '--eval_episode', "$EvalEpisode",
+    '--run_dir', $RunDir,
     '--visualize=',
     '--verbose='
 )
@@ -41,7 +45,7 @@ $monitor = Start-Process -FilePath powershell -ArgumentList @(
     '-ExecutionPolicy', 'Bypass',
     '-File', $MonitorScript,
     '-ProcessId', "$($workload.Id)",
-    '-OutputCsv', $resourceCsv
+    '-OutputPath', $resourceCsv
 ) -WindowStyle Hidden -PassThru
 
 $meta = [ordered]@{
@@ -56,7 +60,8 @@ $meta = [ordered]@{
     stderr_path = $stderr
     resource_csv_path = $resourceCsv
     manifest_path = $manifest
-    changed_knobs = ($ChangedKnobsJson | ConvertFrom-Json)
+    run_dir = $RunDir
+    changed_knobs = $changedKnobs
     first_gate_episode = 20000
     progress_gate_interval = 10000
     max_train_episode = 120000

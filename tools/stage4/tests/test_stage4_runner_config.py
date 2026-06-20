@@ -60,6 +60,11 @@ class Stage4RunnerConfigTests(unittest.TestCase):
         self.assertEqual(save_path, SRC_ROOT / "log" / "exp" / "sac_ogm_20990101_000000")
         self.assertEqual(save_path.parent, SRC_ROOT / "log" / "exp")
 
+    def test_build_ogm_save_path_uses_explicit_run_dir_when_supplied(self) -> None:
+        explicit_run_dir = REPO_ROOT / "src" / "log" / "exp" / "sac_ogm_explicit"
+        save_path = build_ogm_save_path("20990101_000000", run_dir=str(explicit_run_dir))
+        self.assertEqual(save_path, explicit_run_dir)
+
 
 if __name__ == "__main__":
     unittest.main()

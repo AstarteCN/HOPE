@@ -57,7 +57,9 @@ def build_ogm_training_config(env):
     }
 
 
-def build_ogm_save_path(timestamp: str) -> Path:
+def build_ogm_save_path(timestamp: str, run_dir: str | None = None) -> Path:
+    if run_dir is not None:
+        return Path(run_dir).expanduser()
     return SRC_ROOT / "log" / "exp" / f"sac_ogm_{timestamp}"
 
 
@@ -146,6 +148,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--eval_episode", type=int, default=2000)
     parser.add_argument("--verbose", type=bool, default=True)
     parser.add_argument("--visualize", type=bool, default=True)
+    parser.add_argument("--run_dir", type=str, default=None)
     return parser.parse_args()
 
 
@@ -182,7 +185,7 @@ def main() -> int:
 
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    save_path = build_ogm_save_path(timestamp)
+    save_path = build_ogm_save_path(timestamp, run_dir=args.run_dir)
     save_path.mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(str(save_path))
     copyfile(SRC_ROOT / "configs.py", save_path / "configs.txt")
