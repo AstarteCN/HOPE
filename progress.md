@@ -547,3 +547,15 @@
   - Incorporated the user-requested validation policy: 20K first gate against `hope-fast-action-mask-20k`, every-10K monitoring after 20K, one 10K grace window for stagnation/regression, and stop/debug before forcing 100K/120K if no improvement.
   - Self-reviewed the plan for placeholder markers and whitespace errors; no implementation code was changed.
   - Encountered a PowerShell range issue while inspecting code with `Select-Object -Index 39..125`; corrected the approach by using `Select-Object -Skip/-First`.
+
+### Stage 4 OGM Proxy Task 1
+
+- **Status:** implemented and committed.
+- **Started:** 2026-06-20
+- Actions taken:
+  - Added `tools/stage4/tests/test_stage4_progress_gates.py` before implementation.
+  - Verified the RED state with `.\.venv\Scripts\python.exe -m unittest tools.stage4.tests.test_stage4_progress_gates -v`; it failed with `ModuleNotFoundError: No module named 'tools.stage4.stage4_ogm_targets'`.
+  - Added `tools/stage4/__init__.py` and `tools/stage4/stage4_ogm_targets.py`.
+  - Recorded OGM paper simulation targets, `+-3%` relative target bands, the `80K-120K` training window, the 20K first gate, the 10K progress interval, and the accepted `hope-fast-action-mask-20k` baseline.
+  - Verified the GREEN state with the same unittest command; 3 tests passed.
+  - Updated `task_plan.md` Phase 12 state without duplicating the existing Phase 12 section.

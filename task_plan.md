@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Stage 4 OGM Proxy implementation plan written; awaiting execution mode selection
+Stage 4 OGM Proxy Task 1 implemented; awaiting the next Stage 4 execution task
 
 ## Phases
 
@@ -136,10 +136,14 @@ Stage 4 OGM Proxy implementation plan written; awaiting execution mode selection
 
 - [x] Write the implementation plan with `superpowers:writing-plans`.
 - [x] Add the user-requested validation policy: first gate at 20K episodes against `hope-fast-action-mask-20k`, then every-10K monitoring with one 10K grace window before stopping stagnant or degrading runs.
-- [ ] Select execution mode: Subagent-Driven or Inline Execution.
-- [ ] Implement Stage 4 target constants, proxy OGM rasterizer, default-off environment integration, OGM network branch, fixed eval set, OGM eval metrics, progress gates, and launch/monitor tooling.
+- [x] Select execution mode for Task 1: Inline Execution by direct user request.
+- [x] Add Stage 4 target constants and the first progress-gate baseline test.
+- [ ] Implement proxy OGM rasterizer.
+- [ ] Integrate default-off OGM observation into the environment and wrapper.
+- [ ] Add explicit OGM network/config/state-normalization support.
+- [ ] Add fixed OGM-style simulation evaluation set, OGM eval metrics, progress gates, and launch/monitor tooling.
 - [ ] Run 1K, 20K, and every-10K gated validation ladder.
-- **Status:** plan written; no OGM implementation source changes have started in this session.
+- **Status:** Task 1 implemented. Stage 4 now has target constants, OGM paper simulation target bands, and the accepted `hope-fast-action-mask-20k` baseline recorded under `tools/stage4/`.
 
 ## Key Questions
 
