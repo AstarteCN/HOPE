@@ -22,7 +22,9 @@ from tools.stage4.train_HOPE_sac_ogm import (  # noqa: E402
     build_ogm_save_path,
     build_ogm_training_config,
     ensure_src_working_directory,
+    format_best_success_log,
     iter_global_episodes,
+    iter_verbose_history_rows,
     periodic_checkpoint_name,
     resolve_checkpoint_path,
     validate_episode_window,
@@ -123,6 +125,27 @@ class Stage4RunnerConfigTests(unittest.TestCase):
 
     def test_periodic_checkpoint_name_uses_global_episode_number(self) -> None:
         self.assertEqual(periodic_checkpoint_name(29999), "SAC_29999.pt")
+
+    def test_iter_verbose_history_rows_does_not_overread_local_resume_history(self) -> None:
+        rows = list(iter_verbose_history_rows(["case-a"], [12.5], [[1, 2, 3]], limit=10))
+
+        self.assertEqual(rows, [("case-a", 12.5, [1, 2, 3])])
+
+    def test_iter_verbose_history_rows_uses_most_recent_ten_local_items(self) -> None:
+        case_ids = [f"case-{i}" for i in range(12)]
+        rewards = list(range(12))
+        reward_infos = [[i] for i in range(12)]
+
+        rows = list(iter_verbose_history_rows(case_ids, rewards, reward_infos, limit=10))
+
+        self.assertEqual(rows[0], ("case-2", 2, [2]))
+        self.assertEqual(rows[-1], ("case-11", 11, [11]))
+        self.assertEqual(len(rows), 10)
+
+    def test_format_best_success_log_uses_global_episode_identifier(self) -> None:
+        log_line = format_best_success_log(20000, [0.1, 0.2, 0.3, 0.4])
+
+        self.assertEqual(log_line, "epoch: 20000, success rate: 0.1 0.2 0.3 0.4")
 
 
 if __name__ == "__main__":

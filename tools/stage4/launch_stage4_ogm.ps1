@@ -4,6 +4,8 @@ param(
     [int]$StartEpisode = 0,
     [int]$EvalEpisode = 200,
     [string]$ResumeCheckpoint,
+    [string]$ExpDirOverride,
+    [switch]$DryRun,
     [string]$ChangedKnobsJson = '{"policy_inputs":"target+action_mask+ogm","rgb_bev_policy":false,"internal_lidar_for_action_mask":true}'
 )
 
@@ -16,8 +18,13 @@ $SrcDir = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath 'src'
 $Python = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath '.venv\Scripts\python.exe')).Path
 $TrainScript = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath 'tools\stage4\train_HOPE_sac_ogm.py')).Path
 $MonitorScript = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath 'tools\stage3\monitor_stage3_resources.ps1')).Path
-$ExpDir = Join-Path -Path $SrcDir -ChildPath 'log\exp'
+$ExpDir = if ([string]::IsNullOrWhiteSpace($ExpDirOverride)) {
+    Join-Path -Path $SrcDir -ChildPath 'log\exp'
+} else {
+    $ExpDirOverride
+}
 [System.IO.Directory]::CreateDirectory($ExpDir) | Out-Null
+$ExpDir = (Resolve-Path -LiteralPath $ExpDir).Path
 
 $env:SDL_VIDEODRIVER = 'dummy'
 $env:TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD = '1'
@@ -44,32 +51,40 @@ if (-not [string]::IsNullOrWhiteSpace($ResumeCheckpoint)) {
     $args += @('--resume_checkpoint', $ResumeCheckpoint)
 }
 
-$workload = Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
+$initialWorkloadPid = $null
+$workloadPid = $null
+$workloadPidSource = 'dry_run'
+$monitorPid = $null
 
-$initialWorkloadPid = $workload.Id
-$workloadPid = $initialWorkloadPid
-$workloadPidSource = 'initial_process'
-$deadline = (Get-Date).AddSeconds(10)
-do {
-    $childPython = Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $initialWorkloadPid" |
-        Where-Object { $_.Name -like 'python*.exe' } |
-        Sort-Object -Property CreationDate |
-        Select-Object -First 1
-    if ($null -ne $childPython) {
-        $workloadPid = [int]$childPython.ProcessId
-        $workloadPidSource = 'child_python'
-        break
-    }
-    Start-Sleep -Milliseconds 250
-} while ((Get-Date) -lt $deadline)
+if (-not $DryRun) {
+    $workload = Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
 
-$monitor = Start-Process -FilePath powershell -ArgumentList @(
-    '-NoProfile',
-    '-ExecutionPolicy', 'Bypass',
-    '-File', $MonitorScript,
-    '-ProcessId', "$workloadPid",
-    '-OutputPath', $resourceCsv
-) -WindowStyle Hidden -PassThru
+    $initialWorkloadPid = $workload.Id
+    $workloadPid = $initialWorkloadPid
+    $workloadPidSource = 'initial_process'
+    $deadline = (Get-Date).AddSeconds(10)
+    do {
+        $childPython = Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $initialWorkloadPid" |
+            Where-Object { $_.Name -like 'python*.exe' } |
+            Sort-Object -Property CreationDate |
+            Select-Object -First 1
+        if ($null -ne $childPython) {
+            $workloadPid = [int]$childPython.ProcessId
+            $workloadPidSource = 'child_python'
+            break
+        }
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    $monitor = Start-Process -FilePath powershell -ArgumentList @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', $MonitorScript,
+        '-ProcessId', "$workloadPid",
+        '-OutputPath', $resourceCsv
+    ) -WindowStyle Hidden -PassThru
+    $monitorPid = $monitor.Id
+}
 
 $meta = [ordered]@{
     schema_version = 1
@@ -79,10 +94,12 @@ $meta = [ordered]@{
     start_episode = $StartEpisode
     eval_episode = $EvalEpisode
     resume_checkpoint = $ResumeCheckpoint
+    dry_run = [bool]$DryRun
+    runner_args = $args
     workload_pid = $workloadPid
     initial_workload_pid = $initialWorkloadPid
     workload_pid_source = $workloadPidSource
-    monitor_pid = $monitor.Id
+    monitor_pid = $monitorPid
     stdout_path = $stdout
     stderr_path = $stderr
     resource_csv_path = $resourceCsv

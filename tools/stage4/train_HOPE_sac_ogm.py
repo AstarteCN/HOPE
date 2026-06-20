@@ -93,6 +93,23 @@ def periodic_checkpoint_name(global_episode: int) -> str:
     return "SAC_%s.pt" % global_episode
 
 
+def iter_verbose_history_rows(case_id_list, reward_list, reward_info_list, limit: int = 10):
+    available = min(limit, len(case_id_list), len(reward_list), len(reward_info_list))
+    start = len(reward_list) - available
+    for idx in range(start, len(reward_list)):
+        yield case_id_list[idx], reward_list[idx], reward_info_list[idx]
+
+
+def format_best_success_log(global_episode: int, raw_best_success_rate) -> str:
+    return "epoch: %s, success rate: %s %s %s %s" % (
+        global_episode,
+        raw_best_success_rate[0],
+        raw_best_success_rate[1],
+        raw_best_success_rate[2],
+        raw_best_success_rate[3],
+    )
+
+
 class SceneChoose:
     def __init__(self) -> None:
         self.scene_types = {
@@ -331,8 +348,12 @@ def main() -> int:
             print("episode:%s  average reward:%s" % (i, np.mean(reward_list[-50:])))
             print(np.mean(parking_agent.actor_loss_list[-100:]), np.mean(parking_agent.critic_loss_list[-100:]))
             print("time_cost ,rs_dist_reward ,dist_reward ,angle_reward ,box_union_reward")
-            for j in range(10):
-                print(case_id_list[-(10 - j)], reward_list[-(10 - j)], reward_info_list[-(10 - j)])
+            for case_id_history, reward_history, reward_info_history in iter_verbose_history_rows(
+                case_id_list,
+                reward_list,
+                reward_info_list,
+            ):
+                print(case_id_history, reward_history, reward_info_history)
             print("")
 
         for type_id in scene_chooser.scene_types:
@@ -353,16 +374,7 @@ def main() -> int:
             best_success_rate = list(np.minimum(raw_best_success_rate, scene_chooser.target_success_rate))
             parking_agent.save(str(save_path / "SAC_best.pt"), params_only=True)
             with (save_path / "best.txt").open("w") as f_best_log:
-                f_best_log.write(
-                    "epoch: %s, success rate: %s %s %s %s"
-                    % (
-                        i + 1,
-                        raw_best_success_rate[0],
-                        raw_best_success_rate[1],
-                        raw_best_success_rate[2],
-                        raw_best_success_rate[3],
-                    )
-                )
+                f_best_log.write(format_best_success_log(i, raw_best_success_rate))
 
         if (i + 1) % 2000 == 0:
             parking_agent.save(str(save_path / periodic_checkpoint_name(i)), params_only=True)
