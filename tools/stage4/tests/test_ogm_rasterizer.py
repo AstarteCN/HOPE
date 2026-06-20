@@ -50,6 +50,16 @@ class ProxyOGMRasterizerTests(unittest.TestCase):
         self.assertGreater(float(ogm[:, :, 0].sum()), 0.0)
         self.assertGreater(float(ogm[:, :, 1].sum()), 0.0)
 
+    def test_build_ego_ogm_marks_thin_wall_at_default_resolution(self) -> None:
+        config = OGMConfig()
+        ego = State([0.0, 0.0, 0.0])
+        obstacle = LinearRing([(-0.05, 1.0), (0.05, 1.0), (0.05, 2.0), (-0.05, 2.0)])
+        target = LinearRing([(-1.0, -0.5), (-0.25, -0.5), (-0.25, 0.5), (-1.0, 0.5)])
+
+        ogm = build_ego_ogm(ego_state=ego, obstacles=[obstacle], target_box=target, config=config)
+
+        self.assertGreater(float(ogm[:, :, config.obstacle_channel].sum()), 0.0)
+
     def test_build_ego_ogm_is_deterministic(self) -> None:
         config = OGMConfig(size=32, resolution=0.5, channels=2)
         ego = State([0.0, 0.0, 0.0])
@@ -60,6 +70,30 @@ class ProxyOGMRasterizerTests(unittest.TestCase):
         second = build_ego_ogm(ego_state=ego, obstacles=[obstacle], target_box=target, config=config)
 
         np.testing.assert_array_equal(first, second)
+
+    def test_ogm_config_rejects_bad_size_or_resolution(self) -> None:
+        invalid_configs = [
+            {"size": 0},
+            {"size": 32.0},
+            {"resolution": 0.0},
+            {"resolution": math.inf},
+        ]
+        for kwargs in invalid_configs:
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(ValueError):
+                    OGMConfig(**kwargs)
+
+    def test_ogm_config_rejects_negative_channel(self) -> None:
+        with self.assertRaises(ValueError):
+            OGMConfig(obstacle_channel=-1)
+
+    def test_ogm_config_rejects_duplicate_channels(self) -> None:
+        with self.assertRaises(ValueError):
+            OGMConfig(obstacle_channel=0, target_channel=0)
+
+    def test_ogm_config_rejects_non_floating_dtype(self) -> None:
+        with self.assertRaises(ValueError):
+            OGMConfig(dtype=np.int32)
 
 
 if __name__ == "__main__":
