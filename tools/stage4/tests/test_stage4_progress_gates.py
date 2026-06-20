@@ -38,6 +38,28 @@ class Stage4TargetTests(unittest.TestCase):
 
 
 class Stage4ProgressGateTests(unittest.TestCase):
+    def test_hard_rejects_nonfinite_metrics(self) -> None:
+        current = {
+            "episode": 30000,
+            "has_nonfinite": True,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": 1.0, "mean_psr_delta": 1.0, "step_num_improvement": 1.0},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "stop")
+        self.assertIn("nonfinite_tensorboard_or_eval_metric", decision["reasons"])
+
+    def test_hard_rejects_missing_checkpoint(self) -> None:
+        current = {
+            "episode": 30000,
+            "has_nonfinite": False,
+            "checkpoint_exists": False,
+            "trend": {"avg_reward_delta": 1.0, "mean_psr_delta": 1.0, "step_num_improvement": 1.0},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "stop")
+        self.assertIn("missing_checkpoint", decision["reasons"])
+
     def test_20k_gate_allows_weaker_than_hope_baseline_when_trend_improves(self) -> None:
         current = {
             "episode": 20000,
@@ -49,6 +71,41 @@ class Stage4ProgressGateTests(unittest.TestCase):
         decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
         self.assertEqual(decision["decision"], "continue")
         self.assertIn("early_ogm_can_lag_hope_20k_baseline", decision["notes"])
+
+    def test_weak_20k_trend_gets_one_10k_grace_window(self) -> None:
+        current = {
+            "episode": 20000,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": 0.0, "mean_psr_delta": 0.01, "step_num_improvement": 0.0},
+            "summary": {"Sim-Normal": {"psr": 0.40, "angs": 6.0, "pl": 55.0}},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "grace-10k")
+        self.assertIn("weak_20k_trend", decision["reasons"])
+
+    def test_19999_episode_uses_first_gate_policy(self) -> None:
+        current = {
+            "episode": 19999,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": 0.08, "mean_psr_delta": 0.05, "step_num_improvement": 0.08},
+            "summary": {"Sim-Normal": {"psr": 0.70, "angs": 3.0, "pl": 35.0}},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "continue")
+        self.assertIn("early_ogm_can_lag_hope_20k_baseline", decision["notes"])
+
+    def test_no_success_summary_values_do_not_crash_progress_gate(self) -> None:
+        current = {
+            "episode": 20000,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": 0.08, "mean_psr_delta": 0.05, "step_num_improvement": 0.08},
+            "summary": {"Sim-Extreme": {"psr": 0.0, "angs": None, "pl": None}},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "continue")
 
     def test_first_stagnant_gate_gets_one_10k_grace_window(self) -> None:
         current = {
@@ -78,6 +135,30 @@ class Stage4ProgressGateTests(unittest.TestCase):
     def test_recovery_restarts_when_observation_or_rasterizer_changes(self) -> None:
         self.assertEqual(recommend_recovery_action(["ogm_rasterizer_changed"]), "restart-from-scratch")
         self.assertEqual(recommend_recovery_action(["reward_logging_only"]), "resume-from-checkpoint")
+
+    def test_recovery_restarts_for_known_semantic_aliases(self) -> None:
+        for reason in (
+            "action_semantics_changed",
+            "network_input_shape_changed",
+            "replay_meaning_changed",
+            "state_normalization_changed",
+        ):
+            with self.subTest(reason=reason):
+                self.assertEqual(recommend_recovery_action([reason]), "restart-from-scratch")
+
+    def test_recovery_sends_unknown_reasons_to_manual_review(self) -> None:
+        self.assertEqual(recommend_recovery_action(["new_unclassified_training_fix"]), "manual-review")
+
+    def test_recovery_resumes_for_known_logging_eval_and_report_reasons(self) -> None:
+        for reason in (
+            "reward_logging_only",
+            "monitoring_only",
+            "eval_parser_fix",
+            "report_format_only",
+            "resource_monitor_fix",
+        ):
+            with self.subTest(reason=reason):
+                self.assertEqual(recommend_recovery_action([reason]), "resume-from-checkpoint")
 
 
 if __name__ == "__main__":
