@@ -231,8 +231,10 @@ class SACAgent(AgentBase):
                 merged_obs[obs_type] = torch.FloatTensor(np.array(merged_obs[obs_type])).to(self.device)
             obs = merged_obs 
         elif isinstance(obs, dict):
+            tensor_obs = {}
             for obs_type in self.configs.observation_shape.keys():
-                obs[obs_type] = torch.FloatTensor(obs[obs_type]).to(self.device).unsqueeze(0)
+                tensor_obs[obs_type] = torch.FloatTensor(obs[obs_type]).to(self.device).unsqueeze(0)
+            obs = tensor_obs
         else:
             raise NotImplementedError()
         return obs

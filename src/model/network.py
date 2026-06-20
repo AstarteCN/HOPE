@@ -37,7 +37,9 @@ class MultiObsEmbedding(nn.Module):
         embed_size = configs['embed_size']
         hidden_size = configs['hidden_size']
         activate_func = [nn.LeakyReLU(), nn.Tanh()][configs['use_tanh_activate']]
+        self.use_lidar = False if configs['lidar_shape'] is None else True
         self.use_img = False if configs['img_shape'] is None else True
+        self.use_ogm = False if configs.get('ogm_shape') is None else True
         self.use_action_mask = False if configs['action_mask_shape'] is None else True
         self.use_attention = False if configs['attention_configs'] is None else True
         self.input_action = 'input_action_dim' in configs and configs['input_action_dim'] > 0
@@ -92,6 +94,16 @@ class MultiObsEmbedding(nn.Module):
                                     embed_size, configs['img_conv_layers'], configs['img_linear_layers'])
             self.re_embed_img = nn.Sequential(activate_func, nn.Linear(embed_size, embed_size)) # the latten vector may not be scaled
 
+        if configs.get('ogm_shape') is not None:
+            self.embed_ogm = ImgEncoder(
+                configs['ogm_shape'],
+                configs['k_img_conv'],
+                embed_size,
+                configs['img_conv_layers'],
+                configs['img_linear_layers'],
+            )
+            self.re_embed_ogm = nn.Sequential(activate_func, nn.Linear(embed_size, embed_size))
+
         if self.input_action:
             layers = [nn.Linear(configs['input_action_dim'], embed_size)]
             for _ in range(configs['n_embed_layers']-1):
@@ -112,13 +124,14 @@ class MultiObsEmbedding(nn.Module):
             elif layer_name.endswith("bias"):
                 nn.init.constant_(layer, 0)
 
-        for layer_name, layer in self.embed_lidar.state_dict().items():
-            # The output layer is specially dealt
-            gain = 1
-            if layer_name.endswith("weight"):
-                nn.init.orthogonal_(layer, gain=gain)
-            elif layer_name.endswith("bias"):
-                nn.init.constant_(layer, 0)
+        if self.use_lidar:
+            for layer_name, layer in self.embed_lidar.state_dict().items():
+                # The output layer is specially dealt
+                gain = 1
+                if layer_name.endswith("weight"):
+                    nn.init.orthogonal_(layer, gain=gain)
+                elif layer_name.endswith("bias"):
+                    nn.init.constant_(layer, 0)
 
         for layer_name, layer in self.embed_tgt.state_dict().items():
             # The output layer is specially dealt
@@ -139,6 +152,15 @@ class MultiObsEmbedding(nn.Module):
         
         if self.use_img:
             for layer_name, layer in self.re_embed_img.state_dict().items():
+                # The output layer is specially dealt
+                gain = 1
+                if layer_name.endswith("weight"):
+                    nn.init.orthogonal_(layer, gain=gain)
+                elif layer_name.endswith("bias"):
+                    nn.init.constant_(layer, 0)
+
+        if self.use_ogm:
+            for layer_name, layer in self.re_embed_ogm.state_dict().items():
                 # The output layer is specially dealt
                 gain = 1
                 if layer_name.endswith("weight"):
@@ -170,9 +192,11 @@ class MultiObsEmbedding(nn.Module):
             `lidar` : tensor in shape (n, l)
 
         '''
-        feature_lidar = self.embed_lidar(x['lidar'])
+        features = []
+        if self.use_lidar:
+            features.append(self.embed_lidar(x['lidar']))
         feature_target = self.embed_tgt(x['target'])
-        features = [feature_lidar, feature_target]
+        features.append(feature_target)
         if self.use_action_mask:
             feature_am = self.embed_am(x['action_mask'])
             features.append(feature_am)
@@ -181,6 +205,11 @@ class MultiObsEmbedding(nn.Module):
             feature_img, _ = self.embed_img(x['img'])
             feature_img = self.re_embed_img(feature_img)
             features.append(feature_img)
+
+        if self.use_ogm:
+            feature_ogm, _ = self.embed_ogm(x['ogm'])
+            feature_ogm = self.re_embed_ogm(feature_ogm)
+            features.append(feature_ogm)
 
         if self.input_action:
             feature_action = self.embed_action(x['action'])
@@ -194,6 +223,27 @@ class MultiObsEmbedding(nn.Module):
         if self.output_layer is not None:
             out = self.output_layer(out)
         return out
+
+class SACCriticAdapter(nn.Module):
+    def __init__(self, configs: dict, action_dim:int=2):
+        super().__init__()
+        configs = configs.copy()
+        configs['input_action_dim'] = action_dim
+        configs['n_modal'] = (
+            int(configs.get('lidar_shape') is not None) +
+            int(configs.get('target_shape') is not None) +
+            int(configs.get('action_mask_shape') is not None) +
+            int(configs.get('img_shape') is not None) +
+            int(configs.get('ogm_shape') is not None) +
+            1
+        )
+        self.net = MultiObsEmbedding(configs)
+
+    def forward(self, state: dict, action: torch.Tensor = None) -> torch.Tensor:
+        if action is not None:
+            state = state.copy()
+            state['action'] = action
+        return self.net(state)
 
 class ConvBlock(nn.Module):
     def __init__(self, Cin, Cout, K, Pooling=2, padding=None, Batch_norm=False, Res=True, use_tanh=True):
