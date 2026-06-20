@@ -7,6 +7,7 @@ from tools.stage4.stage4_ogm_targets import (
     OGM_SIM_TARGETS,
     relative_band,
 )
+from tools.stage4.stage4_ogm_progress import decide_progress_gate, recommend_recovery_action
 
 
 class Stage4TargetTests(unittest.TestCase):
@@ -34,6 +35,49 @@ class Stage4TargetTests(unittest.TestCase):
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["eval_success"]["Complex"], 0.945)
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["eval_success"]["Extrem"], 0.655)
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["eval_success"]["DLP"], 0.960)
+
+
+class Stage4ProgressGateTests(unittest.TestCase):
+    def test_20k_gate_allows_weaker_than_hope_baseline_when_trend_improves(self) -> None:
+        current = {
+            "episode": 20000,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": 0.08, "mean_psr_delta": 0.05, "step_num_improvement": 0.08},
+            "summary": {"Sim-Normal": {"psr": 0.70, "angs": 3.0, "pl": 35.0}},
+        }
+        decision = decide_progress_gate(current=current, previous=None, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "continue")
+        self.assertIn("early_ogm_can_lag_hope_20k_baseline", decision["notes"])
+
+    def test_first_stagnant_gate_gets_one_10k_grace_window(self) -> None:
+        current = {
+            "episode": 30000,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": -0.01, "mean_psr_delta": 0.0, "step_num_improvement": 0.0},
+            "summary": {"Sim-Normal": {"psr": 0.60, "angs": 4.0, "pl": 45.0}},
+        }
+        previous = {"episode": 20000, "summary": {"Sim-Normal": {"psr": 0.60, "angs": 4.0, "pl": 45.0}}}
+        decision = decide_progress_gate(current=current, previous=previous, previous_bad_gate=False)
+        self.assertEqual(decision["decision"], "grace-10k")
+
+    def test_second_consecutive_stagnant_gate_stops_before_100k(self) -> None:
+        current = {
+            "episode": 40000,
+            "has_nonfinite": False,
+            "checkpoint_exists": True,
+            "trend": {"avg_reward_delta": -0.02, "mean_psr_delta": 0.0, "step_num_improvement": 0.0},
+            "summary": {"Sim-Normal": {"psr": 0.60, "angs": 4.2, "pl": 46.0}},
+        }
+        previous = {"episode": 30000, "summary": {"Sim-Normal": {"psr": 0.60, "angs": 4.0, "pl": 45.0}}}
+        decision = decide_progress_gate(current=current, previous=previous, previous_bad_gate=True)
+        self.assertEqual(decision["decision"], "stop")
+        self.assertIn("second_consecutive_bad_progress_gate", decision["reasons"])
+
+    def test_recovery_restarts_when_observation_or_rasterizer_changes(self) -> None:
+        self.assertEqual(recommend_recovery_action(["ogm_rasterizer_changed"]), "restart-from-scratch")
+        self.assertEqual(recommend_recovery_action(["reward_logging_only"]), "resume-from-checkpoint")
 
 
 if __name__ == "__main__":
