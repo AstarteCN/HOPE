@@ -591,3 +591,17 @@
   - TensorBoard scalars were all present and finite; `avg_reward` trend delta was positive, critic loss stayed finite, and no missing-scalar hard reject was observed.
   - Trusted post-retarget resource samples: 309 samples, average process CPU `5.946%`, average whole-GPU utilization `35.013%`, peak GPU memory `3377 MB`.
   - Wrote `docs/research/2026-06-20-stage4-ogm-proxy-1k-diagnostic.md`.
+
+### Stage 4 OGM Proxy 20K First Gate
+
+- **Status:** running; heartbeat monitor active.
+- **Started:** 2026-06-21 00:55:26 +08:00
+- Actions taken:
+  - Launched `tools/stage4/launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_20k -TrainEpisode 20000 -EvalEpisode 70`.
+  - Locked manifest: `D:\Github\HOPE\src\log\exp\stage4_ogm_proxy_20k_20260621_005526.meta.json`.
+  - Locked run directory: `D:\Github\HOPE\src\log\exp\sac_ogm_stage4_ogm_proxy_20k_20260621_005526`.
+  - Launcher correctly resolved `initial_workload_pid=2360`, actual child `workload_pid=12612`, and `workload_pid_source=child_python`.
+  - Resource monitor PID `17860` is attached to actual training PID `12612`; early CSV rows confirm PID `12612`.
+  - Initial TensorBoard probe after launch reached 32 episodes and 3,761 environment steps with `hard_reject_has_nonfinite=false`.
+  - Created heartbeat automation `hope-stage4-ogm-20k-gate-monitor` at 30-minute intervals to monitor the run through `SAC_19999.pt`, TensorBoard 20K export, fixed OGM eval, gate decision, and report writing.
+  - Corrected the Stage 4 implementation plan's 20K gate probe to use actual TensorBoard summary fields: `trend.delta`, `mean_first500`, and `mean_last100`.

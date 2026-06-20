@@ -2066,9 +2066,9 @@ current = {
     "has_nonfinite": bool(tb.get("hard_reject_has_nonfinite", False)),
     "checkpoint_exists": True,
     "trend": {
-        "avg_reward_delta": float(avg_reward.get("recent_mean", 0.0)) - float(avg_reward.get("mean_first100", 0.0)),
+        "avg_reward_delta": float(avg_reward.get("trend", {}).get("delta", float(avg_reward.get("mean_last100", 0.0)) - float(avg_reward.get("mean_first500", 0.0)))),
         "mean_psr_delta": mean_psr,
-        "step_num_improvement": max(0.0, (float(step_num.get("mean_first100", 0.0)) - float(step_num.get("recent_mean", 0.0))) / max(float(step_num.get("mean_first100", 1.0)), 1.0)),
+        "step_num_improvement": max(0.0, (float(step_num.get("mean_first500", 0.0)) - float(step_num.get("mean_last100", 0.0))) / max(float(step_num.get("mean_first500", 1.0)), 1.0)),
     },
     "summary": summary,
 }

@@ -145,9 +145,9 @@ Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic
 - [x] Add an opt-in Stage 4 OGM SAC runner that uses policy inputs `target + action_mask + ogm` while keeping lidar internal for action-mask generation.
 - [x] Validate Stage 4 plumbing with Stage 4/Stage 3 unit tests and a 20-episode OGM smoke.
 - [x] Run the 1K diagnostic and confirm finite TensorBoard scalars, valid run/manifest/resource artifacts, and no process failure.
-- [ ] Run the 20K first gate against `hope-fast-action-mask-20k`.
+- [ ] Run the 20K first gate against `hope-fast-action-mask-20k`. Current 20K run is active under `src/log/exp/sac_ogm_stage4_ogm_proxy_20k_20260621_005526`.
 - [ ] Continue every-10K gated validation ladder only while trend remains promising.
-- **Status:** 1K diagnostic complete. OGM training plumbing is healthy enough to proceed to the 20K first gate. The 1K run reached 1000 episodes, `131691` env steps, finite actor/critic losses, and `hard_reject_has_nonfinite=false`.
+- **Status:** 20K first gate running. OGM training plumbing passed the 1K diagnostic; heartbeat automation `hope-stage4-ogm-20k-gate-monitor` is tracking the run to `SAC_19999.pt`, fixed-set evaluation, and gate decision.
 
 ## Key Questions
 
