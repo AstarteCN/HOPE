@@ -24,8 +24,10 @@ class Stage4TargetTests(unittest.TestCase):
         self.assertAlmostEqual(high, 103.0)
 
     def test_fast_action_mask_20k_baseline_is_recorded(self) -> None:
+        self.assertEqual(BASELINE_FAST_ACTION_MASK_20K["id"], "hope-fast-action-mask-20k")
         self.assertEqual(BASELINE_FAST_ACTION_MASK_20K["run_dir"], "src/log/exp/sac_20260620_085208")
         self.assertEqual(BASELINE_FAST_ACTION_MASK_20K["checkpoint"], "SAC_19999.pt")
+        self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["wall_time_hours"], 10.947863)
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["episodes_per_hour"], 1826.840564)
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["env_steps_per_second"], 46.223481)
         self.assertAlmostEqual(BASELINE_FAST_ACTION_MASK_20K["eval_success"]["Normal"], 0.985)
