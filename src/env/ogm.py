@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Iterable
 
 import numpy as np
-from shapely.geometry import LinearRing, Polygon
+from shapely.geometry import LinearRing, Polygon, box
 from shapely.prepared import prep
 
 
@@ -144,6 +145,36 @@ def _cell_footprint_world(ego_state: object, row: int, col: int, config: OGMConf
     return Polygon(corners)
 
 
+@lru_cache(maxsize=16)
+def _cached_cell_footprints(size: int, resolution: float) -> tuple[tuple[Polygon, ...], ...]:
+    center = float(size) / 2.0
+    resolution = float(resolution)
+    rows: list[tuple[Polygon, ...]] = []
+    for row in range(size):
+        top = (center - float(row)) * resolution
+        bottom = (center - float(row) - 1.0) * resolution
+        cells = []
+        for col in range(size):
+            left = (float(col) - center) * resolution
+            right = (float(col) + 1.0 - center) * resolution
+            cells.append(box(left, bottom, right, top))
+        rows.append(tuple(cells))
+    return tuple(rows)
+
+
+def _local_candidate_bounds(local_coords: np.ndarray, config: OGMConfig) -> tuple[int, int, int, int]:
+    center = float(config.size) / 2.0
+    resolution = float(config.resolution)
+    cols = local_coords[:, 0] / resolution + center
+    rows = center - local_coords[:, 1] / resolution
+    padding = 2
+    min_row = max(int(np.floor(float(np.min(rows)))) - padding, 0)
+    max_row = min(int(np.floor(float(np.max(rows)))) + padding, config.size - 1)
+    min_col = max(int(np.floor(float(np.min(cols)))) - padding, 0)
+    max_col = min(int(np.floor(float(np.max(cols)))) + padding, config.size - 1)
+    return min_row, max_row, min_col, max_col
+
+
 def _rasterize_ring(
     grid: np.ndarray,
     ego_state: object,
@@ -152,21 +183,19 @@ def _rasterize_ring(
     value: float,
     config: OGMConfig,
 ) -> None:
-    polygon = Polygon(ring)
-    if polygon.is_empty:
+    local_coords = np.asarray(
+        [world_to_local(ego_state, x, y) for x, y in ring.coords],
+        dtype=float,
+    )
+    local_polygon = Polygon(local_coords)
+    if local_polygon.is_empty:
         return
-    prepared = prep(polygon)
-    coords = np.asarray(ring.coords, dtype=float)
-    grid_points = [world_to_grid(ego_state, x, y, config) for x, y in coords]
-    rows = [p[0] for p in grid_points]
-    cols = [p[1] for p in grid_points]
-    min_row = max(min(rows) - 2, 0)
-    max_row = min(max(rows) + 2, config.size - 1)
-    min_col = max(min(cols) - 2, 0)
-    max_col = min(max(cols) + 2, config.size - 1)
+    prepared = prep(local_polygon)
+    min_row, max_row, min_col, max_col = _local_candidate_bounds(local_coords, config)
+    cell_footprints = _cached_cell_footprints(int(config.size), float(config.resolution))
     for row in range(min_row, max_row + 1):
         for col in range(min_col, max_col + 1):
-            cell = _cell_footprint_world(ego_state, row, col, config)
+            cell = cell_footprints[row][col]
             if prepared.intersects(cell):
                 grid[row, col, channel] = value
 

@@ -6,14 +6,20 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-from shapely.geometry import LinearRing
+from shapely.geometry import LinearRing, Point
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from env.ogm import OGMConfig, _cell_center_world, build_ego_ogm, world_to_grid  # noqa: E402
+from env.ogm import (  # noqa: E402
+    OGMConfig,
+    _cached_cell_footprints,
+    _cell_center_world,
+    build_ego_ogm,
+    world_to_grid,
+)
 from env.vehicle import State  # noqa: E402
 
 
@@ -47,6 +53,15 @@ class ProxyOGMRasterizerTests(unittest.TestCase):
         )
         self.assertAlmostEqual(world_x, 0.25)
         self.assertAlmostEqual(world_y, -0.25)
+
+    def test_cached_cell_footprints_are_local_and_reused(self) -> None:
+        first = _cached_cell_footprints(size=64, resolution=0.5)
+        second = _cached_cell_footprints(size=64, resolution=0.5)
+
+        self.assertIs(first, second)
+        self.assertEqual(len(first), 64)
+        self.assertEqual(len(first[0]), 64)
+        self.assertTrue(first[32][32].covers(Point(0.25, -0.25)))
 
     def test_build_ego_ogm_marks_obstacle_and_target_channels(self) -> None:
         config = OGMConfig(size=64, resolution=0.25, channels=2)
