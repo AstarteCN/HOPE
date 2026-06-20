@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Phase 9 opt-in fast action mask complete; next gate is a future 20K candidate run
+Phase 10 fast action mask 20K candidate launch in progress
 
 ## Phases
 
@@ -103,6 +103,20 @@ Phase 9 opt-in fast action mask complete; next gate is a future 20K candidate ru
 - [x] Document results in `docs/research/2026-06-19-stage3-fast-action-mask-opt-in.md`.
 - [x] Run final hygiene checks and push to the draft PR.
 - **Status:** complete. This is not a 20K quality result; fast action mask is admitted only as a future 20K gated candidate.
+
+### Phase 10: Fast Action Mask 20K Candidate Run
+
+- [x] Confirm current branch and planning context.
+- [x] Identify that the fast action-mask branch is default-off and needs an explicit opt-in training wrapper.
+- [x] Add a TDD-tested `tools/stage3/train_HOPE_sac_fast_action_mask.py` wrapper that enables `fast_get_steps=True` by default only for this candidate entry point.
+- [x] Add `-FastActionMask` support to `tools/stage3/launch_stage3_20k.ps1`.
+- [x] Adjust `tools/stage3/stop_stage3_at_20k.ps1` process-safety command fragment to allow the fast-action-mask training wrapper.
+- [x] Run Stage 3 tool tests and PowerShell parser checks before launching.
+- [ ] Commit/push the opt-in launcher wrapper so the long run starts from a clean Git state.
+- [ ] Launch 20K fast-action-mask candidate training with command-only flags and resource monitor.
+- [ ] Set continuous monitor automation for the candidate run.
+- [ ] At/after 20K and `SAC_19999.pt`, stop the run, summarize TensorBoard/resource metrics, evaluate candidate checkpoint, and compare against saved 20K and 36.5K baselines.
+- **Status:** setup verified; launch pending.
 
 ## Key Questions
 

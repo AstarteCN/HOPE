@@ -211,6 +211,7 @@
 | First approved safe source optimization is default-off fast action mask | The user approved continuing after env-step profiling identified `ActionMask.get_steps` as the safest hot-path target. The implementation keeps `ActionMask()` defaulting to the original path and enables the new branch only through `fast_get_steps=True` or profiler `--action-mask-mode fast`. |
 | Fast action mask passes exact-output unit parity | `tools/stage3/tests/test_fast_action_mask.py` compares edge lidar samples and 32 seeded random lidar samples; `ActionMask(fast_get_steps=True).get_steps(...)` exactly equals the original output in all checked cases. |
 | Bounded profile shows fast action mask lowers env-step cost | In command-only env-step diagnostics, action-mask average cost changed from `1.694 ms` to `0.821 ms`, and `env.step` average changed from `9.345 ms` to `8.205 ms`. This is measurement-only evidence for 20K candidate admission, not a quality result. |
+| Fast action mask needs an explicit training entry point | The optimized `ActionMask` branch is default-off by design, so a direct call to `src/train/train_HOPE_sac.py` would not test the optimization. The 20K candidate must use the opt-in wrapper `tools/stage3/train_HOPE_sac_fast_action_mask.py` via `launch_stage3_20k.ps1 -FastActionMask`. |
 
 ## Issues Encountered
 

@@ -455,3 +455,19 @@
 | What's the goal? | Preserve the original HOPE baseline while using the safe-speed 20K framework to evaluate future speed candidates with quality gates. |
 | What have I learned? | The verified framework can summarize TensorBoard, parse eval/resource artifacts, run parity/profile smoke checks, compare 20K candidates, and protect original HOPE source paths. |
 | What have I done? | Implemented and verified Tasks 1-10 from the safe-speed 20K framework plan. |
+
+### Phase 10: Fast Action Mask 20K Candidate Run
+
+- **Status:** setup verified; launch pending.
+- **Started:** 2026-06-20
+- Actions taken:
+  - Recovered planning context and confirmed branch `codex/stage3-resource-study` was clean before new changes.
+  - Confirmed existing `launch_stage3_20k.ps1` did not enable the default-off fast action-mask branch.
+  - Added a failing TDD test for a training wrapper that enables `ActionMask()` fast mode by default while respecting explicit `fast_get_steps=False`.
+  - Implemented `tools/stage3/train_HOPE_sac_fast_action_mask.py` as an external opt-in wrapper around the original `src/train/train_HOPE_sac.py`.
+  - Added `-FastActionMask` to `tools/stage3/launch_stage3_20k.ps1`.
+  - Updated `tools/stage3/stop_stage3_at_20k.ps1` safety fragment from `train_HOPE_sac.py` to `train_HOPE_sac` so it can stop either original or fast wrapper training processes.
+  - Verified wrapper test passed.
+  - Verified PowerShell parser checks for launch and stop scripts passed.
+  - Verified `git diff -- src\train src\env` produced no output.
+  - Ran full Stage 3 tool tests: 38 tests passed.

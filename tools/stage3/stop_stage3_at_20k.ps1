@@ -192,7 +192,7 @@ $workloadStopResult = Stop-ManifestProcess `
     -ExpectedProcessNames @('python', 'pythonw') `
     -StartedAtUtcText ([string]$manifest.workload_started_at_utc) `
     -ExpectedExecutablePath $expectedWorkloadExecutable `
-    -ExpectedCommandFragments @('train_HOPE_sac.py', '--train_episode')
+    -ExpectedCommandFragments @('train_HOPE_sac', '--train_episode')
 $stopResults += $workloadStopResult
 Write-Output $workloadStopResult.message
 Write-Output 'launcher_pid is treated as metadata only and will not be stopped.'

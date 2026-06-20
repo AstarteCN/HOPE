@@ -3,7 +3,8 @@ param(
     [Parameter(Mandatory=$true)][string]$CandidateType,
     [Parameter(Mandatory=$true)][string]$ChangedKnobsJson,
     [int]$TrainEpisode = 20000,
-    [int]$EvalEpisode = 200
+    [int]$EvalEpisode = 200,
+    [switch]$FastActionMask
 )
 
 $ErrorActionPreference = 'Stop'
@@ -110,6 +111,7 @@ $RepoRoot = Resolve-RequiredPath -Path (Join-Path -Path $PSScriptRoot -ChildPath
 $SrcDir = Resolve-RequiredPath -Path (Join-Path -Path $RepoRoot -ChildPath 'src') -Description 'HOPE src directory'
 $Python = Resolve-RequiredPath -Path (Join-Path -Path $RepoRoot -ChildPath '.venv\Scripts\python.exe') -Description 'Project Python executable'
 $TrainScript = Resolve-RequiredPath -Path (Join-Path -Path $SrcDir -ChildPath 'train\train_HOPE_sac.py') -Description 'Original HOPE SAC training script'
+$FastActionMaskTrainScript = Resolve-RequiredPath -Path (Join-Path -Path $RepoRoot -ChildPath 'tools\stage3\train_HOPE_sac_fast_action_mask.py') -Description 'Stage 3 fast action-mask training wrapper'
 $MonitorScript = Resolve-RequiredPath -Path (Join-Path -Path $RepoRoot -ChildPath 'tools\stage3\monitor_stage3_resources.ps1') -Description 'Stage 3 resource monitor script'
 Resolve-RequiredPath -Path (Join-Path -Path $RepoRoot -ChildPath 'tools\stage3\stage3_manifest.py') -Description 'Stage 3 manifest helper' | Out-Null
 
@@ -132,8 +134,13 @@ $ManifestPath = Join-Path -Path $ExpDir -ChildPath "$logPrefix.meta.json"
 $env:SDL_VIDEODRIVER = 'dummy'
 $env:TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD = '1'
 
+$trainingEntryPoint = '.\train\train_HOPE_sac.py'
+if ($FastActionMask) {
+    $trainingEntryPoint = $FastActionMaskTrainScript
+}
+
 $trainingArgs = @(
-    '.\train\train_HOPE_sac.py',
+    $trainingEntryPoint,
     '--train_episode',
     "$TrainEpisode",
     '--eval_episode',
@@ -188,6 +195,7 @@ $commandJson = $commandForManifest | ConvertTo-Json -Compress
 $environmentJson = @{
     SDL_VIDEODRIVER = $env:SDL_VIDEODRIVER
     TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD = $env:TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD
+    STAGE3_FAST_ACTION_MASK = if ($FastActionMask) { '1' } else { '0' }
 } | ConvertTo-Json -Compress
 
 $manifestCode = @'
