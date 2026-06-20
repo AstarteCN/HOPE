@@ -245,6 +245,9 @@ class SACCriticAdapter(nn.Module):
             state['action'] = action
         return self.net(state)
 
+    def load_img_encoder(self, path: str = None, device: str = None, require_grad: bool = False) -> None:
+        self.net.load_img_encoder(path, device, require_grad)
+
 class ConvBlock(nn.Module):
     def __init__(self, Cin, Cout, K, Pooling=2, padding=None, Batch_norm=False, Res=True, use_tanh=True):
         super().__init__()

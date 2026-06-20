@@ -106,6 +106,35 @@ class OGMNetworkTests(unittest.TestCase):
         self.assertIn("ogm", tensor_obs)
         self.assertNotIn("lidar", tensor_obs)
 
+    def test_sac_agent_actor_and_critic_accept_ogm_config(self) -> None:
+        config = {
+            "discrete": False,
+            "observation_shape": {
+                "target": (5,),
+                "action_mask": (N_DISCRETE_ACTION,),
+                "ogm": (2, 64, 64),
+            },
+            "action_dim": 2,
+            "actor_layers": actor_config(),
+            "critic_layers": critic_config(),
+        }
+        agent = SACAgent(config)
+        obs = {
+            "target": np.zeros((5,), dtype=np.float32),
+            "action_mask": np.ones((N_DISCRETE_ACTION,), dtype=np.float32),
+            "ogm": np.zeros((2, 64, 64), dtype=np.float32),
+            "lidar": np.zeros((120,), dtype=np.float32),
+        }
+        tensor_obs = agent.obs2tensor(obs)
+        actor_output = agent.actor_net(tensor_obs)
+        self.assertEqual(tuple(actor_output.shape), (1, 2))
+        self.assertTrue(torch.isfinite(actor_output).all())
+
+        action = torch.zeros((1, 2), dtype=torch.float32, device=agent.device)
+        critic_output = agent.critic_net1(tensor_obs, action)
+        self.assertEqual(tuple(critic_output.shape), (1, 1))
+        self.assertTrue(torch.isfinite(critic_output).all())
+
 
 if __name__ == "__main__":
     unittest.main()
