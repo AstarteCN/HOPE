@@ -559,3 +559,12 @@
   - Recorded OGM paper simulation targets, `+-3%` relative target bands, the `80K-120K` training window, the 20K first gate, the 10K progress interval, and the accepted `hope-fast-action-mask-20k` baseline.
   - Verified the GREEN state with the same unittest command; 3 tests passed.
   - Updated `task_plan.md` Phase 12 state without duplicating the existing Phase 12 section.
+
+### Stage 4 OGM Proxy Task 9
+
+- **Status:** implemented and committed.
+- **Started:** 2026-06-20
+- Actions taken:
+  - Added `tools/stage4/launch_stage4_ogm.ps1` to launch the Stage 4 OGM training wrapper, resource monitor, stdout/stderr logs, and manifest metadata under `src/log/exp`.
+  - Added `tools/stage4/monitor_stage4_ogm_progress.ps1` to export TensorBoard gate summaries and verify the expected `SAC_<gate-1>.pt` checkpoint exists.
+  - Verified both PowerShell scripts parse with `[scriptblock]::Create(...)`.
