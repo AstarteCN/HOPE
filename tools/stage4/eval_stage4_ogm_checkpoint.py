@@ -13,6 +13,7 @@ from typing import Any, Iterable, Mapping
 import numpy as np
 
 
+EXPECTED_SPLITS = ("Sim-Normal", "Sim-Complex")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_ROOT = REPO_ROOT / "src"
 for import_root in (REPO_ROOT, SRC_ROOT):
@@ -21,6 +22,7 @@ for import_root in (REPO_ROOT, SRC_ROOT):
 
 
 def count_gear_shifts(speeds: Iterable[float]) -> int:
+    """Count gear shifts as commanded-speed sign changes, ignoring zero speeds."""
     last_sign = 0
     shifts = 0
     for speed in speeds:
@@ -33,12 +35,22 @@ def count_gear_shifts(speeds: Iterable[float]) -> int:
     return shifts
 
 
-def summarize_eval_records(records: Iterable[Mapping[str, object]]) -> dict[str, dict[str, float]]:
+def summarize_eval_records(
+    records: Iterable[Mapping[str, object]],
+    expected_splits: Iterable[str] = EXPECTED_SPLITS,
+) -> dict[str, dict[str, float | None]]:
+    """Summarize PSR over all cases and ANGS/PL over successful cases by expected split."""
     grouped: dict[str, list[Mapping[str, object]]] = defaultdict(list)
     for record in records:
         grouped[str(record["split"])].append(record)
 
-    summary: dict[str, dict[str, float]] = {}
+    missing_splits = [split for split in expected_splits if not grouped.get(split)]
+    if len(missing_splits) == 1:
+        raise ValueError(f"Missing eval records for expected split: {missing_splits[0]}")
+    if missing_splits:
+        raise ValueError(f"Missing eval records for expected splits: {', '.join(missing_splits)}")
+
+    summary: dict[str, dict[str, float | None]] = {}
     for split, split_records in grouped.items():
         successes = [record for record in split_records if bool(record["success"])]
         psr = len(successes) / len(split_records) if split_records else 0.0
@@ -46,8 +58,8 @@ def summarize_eval_records(records: Iterable[Mapping[str, object]]) -> dict[str,
             angs = sum(float(record["gear_shifts"]) for record in successes) / len(successes)
             pl = sum(float(record["path_length"]) for record in successes) / len(successes)
         else:
-            angs = float("inf")
-            pl = float("inf")
+            angs = None
+            pl = None
         summary[split] = {"psr": psr, "angs": angs, "pl": pl}
     return summary
 
@@ -178,7 +190,10 @@ def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, out
 
         result = {"records": records, "summary": summarize_eval_records(records)}
         output_json.parent.mkdir(parents=True, exist_ok=True)
-        output_json.write_text(json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        output_json.write_text(
+            json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
+            encoding="utf-8",
+        )
         return result
     finally:
         raw_env.close()
