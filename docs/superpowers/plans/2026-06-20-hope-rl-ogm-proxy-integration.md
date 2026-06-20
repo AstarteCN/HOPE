@@ -2149,11 +2149,12 @@ git commit -m "Record Stage 4 OGM 20K gate"
 
 - [ ] **Step 1: Continue or relaunch the OGM long run according to 20K decision**
 
-If the 20K decision is `continue`, use the existing process if it is still running. If it stopped at exactly 20K, relaunch from checkpoint only when no implementation semantics changed:
+If the 20K decision is `continue`, use the existing process if it is still running. If it stopped at exactly 20K, relaunch with Stage4 checkpoint-based continuation only when no implementation semantics changed. The continuation command must preserve global episode numbering with `-StartEpisode 20000`; it does not restore replay buffer, RNG, curriculum/scenario chooser state, DLP chooser state, reward history, or `total_step_num` from the checkpoint:
 
 ```powershell
 cd D:\Github\HOPE
-.\tools\stage4\launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_long -TrainEpisode 100000 -EvalEpisode 70 -ChangedKnobsJson '{"resume_from":"SAC_19999.pt","policy_inputs":"target+action_mask+ogm"}'
+$Checkpoint20K = 'D:\Github\HOPE\src\log\exp\sac_ogm_stage4_ogm_proxy_20k_20260621_005526\SAC_19999.pt'
+.\tools\stage4\launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_long -TrainEpisode 100000 -EvalEpisode 70 -ResumeCheckpoint $Checkpoint20K -StartEpisode 20000 -ChangedKnobsJson '{"resume_from":"SAC_19999.pt","start_episode":20000,"policy_inputs":"target+action_mask+ogm","continuation_type":"checkpoint_based"}'
 ```
 
 If OGM rasterizer, observation semantics, reward semantics, network shape, or state normalization changed after the 20K gate, restart from scratch:

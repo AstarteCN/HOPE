@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic. Next step: launch the 20K first gate against the accepted `hope-fast-action-mask-20k` baseline.
+Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic. The 20K first gate is running against the accepted `hope-fast-action-mask-20k` baseline, with heartbeat monitoring active.
 
 ## Phases
 
@@ -145,9 +145,10 @@ Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic
 - [x] Add an opt-in Stage 4 OGM SAC runner that uses policy inputs `target + action_mask + ogm` while keeping lidar internal for action-mask generation.
 - [x] Validate Stage 4 plumbing with Stage 4/Stage 3 unit tests and a 20-episode OGM smoke.
 - [x] Run the 1K diagnostic and confirm finite TensorBoard scalars, valid run/manifest/resource artifacts, and no process failure.
+- [x] Add and review Stage4-only checkpoint continuation support for post-20K gated training. This supports `-ResumeCheckpoint` plus `-StartEpisode` for episode-number continuity, but remains checkpoint-based continuation rather than full replay/RNG/curriculum process resume.
 - [ ] Run the 20K first gate against `hope-fast-action-mask-20k`. Current 20K run is active under `src/log/exp/sac_ogm_stage4_ogm_proxy_20k_20260621_005526`.
 - [ ] Continue every-10K gated validation ladder only while trend remains promising.
-- **Status:** 20K first gate running. OGM training plumbing passed the 1K diagnostic; heartbeat automation `hope-stage4-ogm-20k-gate-monitor` is tracking the run to `SAC_19999.pt`, fixed-set evaluation, and gate decision.
+- **Status:** 20K first gate running. OGM training plumbing passed the 1K diagnostic; heartbeat automation `hope-stage4-ogm-20k-gate-monitor` is tracking the run to `SAC_19999.pt`, fixed-set evaluation, and gate decision. Subagent-driven follow-up added checkpoint-based continuation tooling for 20K -> later 10K gates, and both spec and code-quality reviews passed.
 
 ## Key Questions
 
@@ -210,6 +211,7 @@ Stage 4 OGM Proxy implementation has passed plumbing smoke and the 1K diagnostic
 | OGM Proxy PRD written for review | The approved brainstorming design was saved to `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`; the next step is user review, not implementation. |
 | OGM Proxy implementation plan written | The approved PRD was converted into `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md`; execution is gated on user choosing Subagent-Driven or Inline Execution. |
 | OGM validation must stop bad long runs early | Stage 4 will use a 20K first gate and every-10K monitoring. A weak early OGM result can continue if trend improves, but a stagnant/regressing gate gets only one additional 10K grace window before stopping for TensorBoard/debug-driven optimization. |
+| Stage 4 checkpoint continuation is tooling-only, not full process resume | The 20K run stops at `TrainEpisode=20000`; later gates can now use `-ResumeCheckpoint` with `-StartEpisode` so TensorBoard steps and checkpoint names continue globally. This does not restore replay buffer, RNG, scene chooser, DLP chooser, or curriculum process state from old checkpoints, so quality interpretation must caveat it as checkpoint-based continuation. |
 
 ## Errors Encountered
 

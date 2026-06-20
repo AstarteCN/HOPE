@@ -605,3 +605,10 @@
   - Initial TensorBoard probe after launch reached 32 episodes and 3,761 environment steps with `hard_reject_has_nonfinite=false`.
   - Created heartbeat automation `hope-stage4-ogm-20k-gate-monitor` at 30-minute intervals to monitor the run through `SAC_19999.pt`, TensorBoard 20K export, fixed OGM eval, gate decision, and report writing.
   - Corrected the Stage 4 implementation plan's 20K gate probe to use actual TensorBoard summary fields: `trend.delta`, `mean_first500`, and `mean_last100`.
+  - Entered goal-mode/Subagent-Driven execution for Stage 4 KPI reproduction and kept the long-running validation inside the active goal.
+  - Spawned a read-only subagent to inspect the post-20K execution path. It found that the initial Stage 4 runner/launcher did not support real gate-continuation semantics: `--agent_ckpt` could warm-start weights, but episode numbering, TensorBoard steps, checkpoint names, launcher args, and manifest fields reset after 20K.
+  - Implemented Stage4-only checkpoint continuation support through subagent-driven TDD: runner `--resume_checkpoint` and `--start_episode`, legacy `--agent_ckpt` conflict detection, launcher `-ResumeCheckpoint` and `-StartEpisode`, global episode numbering, and PowerShell argument quoting for paths with spaces.
+  - Fixed two review-found issues before accepting the work: resume verbose logging could index past local history at `start_episode=20000`, and `start_episode > 0` without a checkpoint could masquerade as continuation.
+  - Spec review passed after fixes; code-quality review approved after launcher quoting and positive-start validation were hardened.
+  - Local verification passed: `.\.venv\Scripts\python.exe -m pytest tools/stage3/tests tools/stage4/tests` reported `99 passed`.
+  - Caveat recorded: this is checkpoint-based continuation for gate cadence, not full process resume. Replay buffer, RNG, curriculum/scenario chooser state, DLP chooser state, reward history, and `total_step_num` are not restored from `SAC_19999.pt`.
