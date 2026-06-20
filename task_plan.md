@@ -6,7 +6,7 @@ Prepare Stage 3 so original HOPE retraining includes hardware-utilization resear
 
 ## Current Phase
 
-Stage 4 OGM Proxy PRD written; awaiting user review
+Stage 4 OGM Proxy implementation plan written; awaiting execution mode selection
 
 ## Phases
 
@@ -128,8 +128,18 @@ Stage 4 OGM Proxy PRD written; awaiting user review
 - [x] Propose 2-3 OGM integration PRD approaches with trade-offs.
 - [x] Present the selected PRD design sections for user approval.
 - [x] Write the approved PRD/spec under `docs/superpowers/specs/`.
-- [ ] Wait for user review of `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`.
-- **Status:** PRD written and self-reviewed. Do not implement OGM source code until the user approves the written PRD and it is converted into an executable implementation plan.
+- [x] Wait for user review of `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`.
+- [x] Convert the approved PRD into an executable implementation plan.
+- **Status:** complete. PRD was approved and converted into `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md`.
+
+### Phase 12: Stage 4 OGM Proxy Implementation
+
+- [x] Write the implementation plan with `superpowers:writing-plans`.
+- [x] Add the user-requested validation policy: first gate at 20K episodes against `hope-fast-action-mask-20k`, then every-10K monitoring with one 10K grace window before stopping stagnant or degrading runs.
+- [ ] Select execution mode: Subagent-Driven or Inline Execution.
+- [ ] Implement Stage 4 target constants, proxy OGM rasterizer, default-off environment integration, OGM network branch, fixed eval set, OGM eval metrics, progress gates, and launch/monitor tooling.
+- [ ] Run 1K, 20K, and every-10K gated validation ladder.
+- **Status:** plan written; no OGM implementation source changes have started in this session.
 
 ## Key Questions
 
@@ -190,6 +200,8 @@ Stage 4 OGM Proxy PRD written; awaiting user review
 | OGM evaluation dataset scope is option C | Hard acceptance should use a new OGM-style fixed `20 parallel + 50 perpendicular` simulation evaluation set, while HOPE Normal/Complex remain compatibility and regression metrics. |
 | OGM PRD route is方案 1: Proxy OGM First | Build a first-class proxy OGM observation path inside HOPE, enforce strict simulation KPI gates, and defer real-world OGM dataset acceptance until real OGM data exists. |
 | OGM Proxy PRD written for review | The approved brainstorming design was saved to `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`; the next step is user review, not implementation. |
+| OGM Proxy implementation plan written | The approved PRD was converted into `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md`; execution is gated on user choosing Subagent-Driven or Inline Execution. |
+| OGM validation must stop bad long runs early | Stage 4 will use a 20K first gate and every-10K monitoring. A weak early OGM result can continue if trend improves, but a stagnant/regressing gate gets only one additional 10K grace window before stopping for TensorBoard/debug-driven optimization. |
 
 ## Errors Encountered
 

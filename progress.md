@@ -532,3 +532,18 @@
   - Presented five PRD design sections and received user confirmation for each: goals/acceptance, scope/non-goals, architecture/data flow, tests/gates, and deliverables/risks.
   - Wrote `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`.
   - Self-reviewed the PRD for placeholders, internal consistency, scope drift, and ambiguity; no implementation work was started.
+
+### Stage 4 OGM Proxy Implementation Plan
+
+- **Status:** plan written; awaiting execution mode selection.
+- **Started:** 2026-06-20
+- Actions taken:
+  - User approved moving from the OGM Proxy PRD into `superpowers:writing-plans`.
+  - Read `superpowers:writing-plans` and `planning-with-files`.
+  - Ran planning session catchup and confirmed the PRD commit `0a15fd5 Add HOPE RL-OGM proxy PRD` is local and the branch is ahead of origin.
+  - Re-read the approved PRD and current planning files.
+  - Inspected source anchors: `CarParking`, `CarParkingWrapper`, `configs.py`, `MultiObsEmbedding`, `StateNorm`, `SACAgent.obs2tensor`, `eval_utils.py`, `train_HOPE_sac.py`, normal/DLP maps, and Stage 3 tools.
+  - Wrote `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md`.
+  - Incorporated the user-requested validation policy: 20K first gate against `hope-fast-action-mask-20k`, every-10K monitoring after 20K, one 10K grace window for stagnation/regression, and stop/debug before forcing 100K/120K if no improvement.
+  - Self-reviewed the plan for placeholder markers and whitespace errors; no implementation code was changed.
+  - Encountered a PowerShell range issue while inspecting code with `Select-Object -Index 39..125`; corrected the approach by using `Select-Object -Skip/-First`.
