@@ -40,11 +40,28 @@ $args = @(
 
 $workload = Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
 
+$initialWorkloadPid = $workload.Id
+$workloadPid = $initialWorkloadPid
+$workloadPidSource = 'initial_process'
+$deadline = (Get-Date).AddSeconds(10)
+do {
+    $childPython = Get-CimInstance -ClassName Win32_Process -Filter "ParentProcessId = $initialWorkloadPid" |
+        Where-Object { $_.Name -like 'python*.exe' } |
+        Sort-Object -Property CreationDate |
+        Select-Object -First 1
+    if ($null -ne $childPython) {
+        $workloadPid = [int]$childPython.ProcessId
+        $workloadPidSource = 'child_python'
+        break
+    }
+    Start-Sleep -Milliseconds 250
+} while ((Get-Date) -lt $deadline)
+
 $monitor = Start-Process -FilePath powershell -ArgumentList @(
     '-NoProfile',
     '-ExecutionPolicy', 'Bypass',
     '-File', $MonitorScript,
-    '-ProcessId', "$($workload.Id)",
+    '-ProcessId', "$workloadPid",
     '-OutputPath', $resourceCsv
 ) -WindowStyle Hidden -PassThru
 
@@ -54,7 +71,9 @@ $meta = [ordered]@{
     candidate_type = 'stage4_ogm_proxy'
     train_episode = $TrainEpisode
     eval_episode = $EvalEpisode
-    workload_pid = $workload.Id
+    workload_pid = $workloadPid
+    initial_workload_pid = $initialWorkloadPid
+    workload_pid_source = $workloadPidSource
     monitor_pid = $monitor.Id
     stdout_path = $stdout
     stderr_path = $stderr
