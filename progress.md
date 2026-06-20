@@ -458,7 +458,7 @@
 
 ### Phase 10: Fast Action Mask 20K Candidate Run
 
-- **Status:** setup verified; launch pending.
+- **Status:** running under heartbeat monitor automation `hope-fast-action-mask-20k-monitor`.
 - **Started:** 2026-06-20
 - Actions taken:
   - Recovered planning context and confirmed branch `codex/stage3-resource-study` was clean before new changes.
@@ -471,3 +471,14 @@
   - Verified PowerShell parser checks for launch and stop scripts passed.
   - Verified `git diff -- src\train src\env` produced no output.
   - Ran full Stage 3 tool tests: 38 tests passed.
+  - Committed and pushed `03105b9 Add fast action mask training launcher`.
+  - Launched candidate with `tools/stage3/launch_stage3_20k.ps1 -RunName stage3_fast_action_mask_20k -CandidateType fast_action_mask_20k_validation -TrainEpisode 20000 -EvalEpisode 200 -FastActionMask`.
+  - Locked manifest: `src/log/exp/stage3_fast_action_mask_20k_20260620_085206.meta.json`.
+  - Locked run dir: `src/log/exp/sac_20260620_085208`.
+  - Initial workload PID in manifest was venv launcher parent `29844`; actual TensorBoard/training child PID is `3696`.
+  - Stopped the original resource monitor on parent PID and restarted it on child PID `3696` as monitor PID `19300`.
+  - Updated manifest `workload_pid=3696`, `workload_parent_pid=29844`, `python_executable=C:\Users\zhang\AppData\Local\Programs\Python\Python313\python.exe`, and monitor PID `19300`.
+  - Confirmed resource CSV is now appending rows for PID `3696`; first startup rows for PID `29844` are monitor-bias rows and should be excluded or caveated in final resource interpretation.
+  - TensorBoard initial live summary reached 52 episodes and 6,222 env steps; `hard_reject_has_nonfinite=False`.
+  - Opened TensorBoard in the in-app browser at `http://127.0.0.1:6006/?darkMode=true#timeseries&runSelectionState=eyJzYWNfMjAyNjA2MjBfMDg1MjA4Ijp0cnVlfQ%3D%3D`.
+  - Created heartbeat monitor automation `hope-fast-action-mask-20k-monitor` at 15-minute intervals.

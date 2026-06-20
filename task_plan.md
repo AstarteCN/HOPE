@@ -112,11 +112,13 @@ Phase 10 fast action mask 20K candidate launch in progress
 - [x] Add `-FastActionMask` support to `tools/stage3/launch_stage3_20k.ps1`.
 - [x] Adjust `tools/stage3/stop_stage3_at_20k.ps1` process-safety command fragment to allow the fast-action-mask training wrapper.
 - [x] Run Stage 3 tool tests and PowerShell parser checks before launching.
-- [ ] Commit/push the opt-in launcher wrapper so the long run starts from a clean Git state.
-- [ ] Launch 20K fast-action-mask candidate training with command-only flags and resource monitor.
-- [ ] Set continuous monitor automation for the candidate run.
+- [x] Commit/push the opt-in launcher wrapper so the long run starts from a clean Git state.
+- [x] Launch 20K fast-action-mask candidate training with command-only flags and resource monitor.
+- [x] Reassign manifest workload PID from the venv launcher parent to the actual child Python training process.
+- [x] Restart the resource monitor against the actual child training PID.
+- [x] Set continuous monitor automation for the candidate run.
 - [ ] At/after 20K and `SAC_19999.pt`, stop the run, summarize TensorBoard/resource metrics, evaluate candidate checkpoint, and compare against saved 20K and 36.5K baselines.
-- **Status:** setup verified; launch pending.
+- **Status:** running under monitor automation `hope-fast-action-mask-20k-monitor`.
 
 ## Key Questions
 
@@ -167,6 +169,8 @@ Phase 10 fast action mask 20K candidate launch in progress
 | First true safe optimization point is `ActionMask.get_steps` | Detailed env-step profiling shows action mask costs about `1.78 ms/raw_step`; an equivalent allocation-free formula matched outputs exactly in a micro-probe and reduced isolated calls from about `1.48 ms` to `0.77 ms`. This preserves action-mask semantics and is safer than touching the RGB image pipeline first. |
 | Keep fast action mask default-off | The approved source change must not silently alter original HOPE training. `ActionMask()` still uses the original `get_steps` behavior; fast mode requires `fast_get_steps=True` or profiler `--action-mask-mode fast`. |
 | Treat fast action mask as an admitted candidate, not a validated training speedup | Bounded diagnostics show action-mask average cost dropped from `1.694 ms` to `0.821 ms`, but the change still needs a future 20K gated run against the command-only 20K baseline before it can be called safe for training. |
+| Fast action-mask 20K run launched from a clean Git state | Manifest `src/log/exp/stage3_fast_action_mask_20k_20260620_085206.meta.json` records clean branch status at launch, run dir `src/log/exp/sac_20260620_085208`, command-only flags, and `fast_action_mask=true`. |
+| Reassign fast candidate monitor to the actual Python child PID | The venv launcher parent PID `29844` spawned child PID `3696`, which writes TensorBoard and consumes resources. Manifest and resource monitor were updated to track PID `3696`; the first few resource CSV rows for PID `29844` should be treated as startup-only monitor bias. |
 
 ## Errors Encountered
 
