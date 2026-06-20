@@ -57,6 +57,10 @@ def build_ogm_training_config(env):
     }
 
 
+def build_ogm_save_path(timestamp: str) -> Path:
+    return SRC_ROOT / "log" / "exp" / f"sac_ogm_{timestamp}"
+
+
 class SceneChoose:
     def __init__(self) -> None:
         self.scene_types = {
@@ -178,7 +182,7 @@ def main() -> int:
 
     current_time = time.localtime()
     timestamp = time.strftime("%Y%m%d_%H%M%S", current_time)
-    save_path = REPO_ROOT / "log" / "exp" / f"sac_ogm_{timestamp}"
+    save_path = build_ogm_save_path(timestamp)
     save_path.mkdir(parents=True, exist_ok=True)
     writer = SummaryWriter(str(save_path))
     copyfile(SRC_ROOT / "configs.py", save_path / "configs.txt")
