@@ -17,7 +17,11 @@ from configs import ACTOR_CONFIGS, CRITIC_CONFIGS  # noqa: E402
 from env.car_parking_base import CarParking  # noqa: E402
 from env.env_wrapper import CarParkingWrapper  # noqa: E402
 from model.agent.sac_agent import SACAgent  # noqa: E402
-from tools.stage4.train_HOPE_sac_ogm import build_ogm_save_path, build_ogm_training_config  # noqa: E402
+from tools.stage4.train_HOPE_sac_ogm import (  # noqa: E402
+    build_ogm_save_path,
+    build_ogm_training_config,
+    ensure_src_working_directory,
+)
 
 
 class Stage4RunnerConfigTests(unittest.TestCase):
@@ -64,6 +68,19 @@ class Stage4RunnerConfigTests(unittest.TestCase):
         explicit_run_dir = REPO_ROOT / "src" / "log" / "exp" / "sac_ogm_explicit"
         save_path = build_ogm_save_path("20990101_000000", run_dir=str(explicit_run_dir))
         self.assertEqual(save_path, explicit_run_dir)
+
+    def test_ensure_src_working_directory_normalizes_from_repo_root(self) -> None:
+        old_cwd = Path.cwd()
+        try:
+            os.chdir(REPO_ROOT)
+            self.assertEqual(Path.cwd(), REPO_ROOT)
+
+            normalized_cwd = ensure_src_working_directory()
+
+            self.assertEqual(normalized_cwd, SRC_ROOT)
+            self.assertEqual(Path.cwd(), SRC_ROOT)
+        finally:
+            os.chdir(old_cwd)
 
 
 if __name__ == "__main__":

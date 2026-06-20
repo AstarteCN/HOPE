@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from copy import deepcopy
@@ -16,6 +17,11 @@ for import_root in (REPO_ROOT, SRC_ROOT):
         sys.path.insert(0, str(import_root))
 
 from configs import ACTOR_CONFIGS, CRITIC_CONFIGS  # noqa: E402
+
+
+def ensure_src_working_directory() -> Path:
+    os.chdir(SRC_ROOT)
+    return SRC_ROOT
 
 
 def build_ogm_training_config(env):
@@ -153,6 +159,8 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    ensure_src_working_directory()
+
     import matplotlib.pyplot as plt
     import torch
     from torch.utils.tensorboard import SummaryWriter
