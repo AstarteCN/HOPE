@@ -11,6 +11,27 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function ConvertTo-ProcessArgument {
+    param([AllowNull()][string]$Argument)
+
+    if ($null -eq $Argument -or $Argument.Length -eq 0) {
+        return '""'
+    }
+    if ($Argument -notmatch '[\s"]') {
+        return $Argument
+    }
+
+    $escaped = $Argument -replace '(\\*)"', '$1$1\"'
+    $escaped = $escaped -replace '(\\+)$', '$1$1'
+    return '"' + $escaped + '"'
+}
+
+function Join-ProcessArgumentList {
+    param([string[]]$ArgumentList)
+
+    return (($ArgumentList | ForEach-Object { ConvertTo-ProcessArgument $_ }) -join ' ')
+}
+
 $changedKnobs = $ChangedKnobsJson | ConvertFrom-Json -ErrorAction Stop
 
 $RepoRoot = (Resolve-Path -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath '..\..')).Path
@@ -50,6 +71,8 @@ $args = @(
 if (-not [string]::IsNullOrWhiteSpace($ResumeCheckpoint)) {
     $args += @('--resume_checkpoint', $ResumeCheckpoint)
 }
+$runnerArgumentString = Join-ProcessArgumentList $args
+$resumeCheckpointForManifest = if ([string]::IsNullOrWhiteSpace($ResumeCheckpoint)) { $null } else { $ResumeCheckpoint }
 
 $initialWorkloadPid = $null
 $workloadPid = $null
@@ -57,7 +80,7 @@ $workloadPidSource = 'dry_run'
 $monitorPid = $null
 
 if (-not $DryRun) {
-    $workload = Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
+    $workload = Start-Process -FilePath $Python -ArgumentList $runnerArgumentString -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
 
     $initialWorkloadPid = $workload.Id
     $workloadPid = $initialWorkloadPid
@@ -76,13 +99,19 @@ if (-not $DryRun) {
         Start-Sleep -Milliseconds 250
     } while ((Get-Date) -lt $deadline)
 
-    $monitor = Start-Process -FilePath powershell -ArgumentList @(
-        '-NoProfile',
-        '-ExecutionPolicy', 'Bypass',
-        '-File', $MonitorScript,
-        '-ProcessId', "$workloadPid",
-        '-OutputPath', $resourceCsv
-    ) -WindowStyle Hidden -PassThru
+}
+
+$monitorArgs = @(
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', $MonitorScript,
+    '-ProcessId', "$workloadPid",
+    '-OutputPath', $resourceCsv
+)
+$monitorArgumentString = Join-ProcessArgumentList $monitorArgs
+
+if (-not $DryRun) {
+    $monitor = Start-Process -FilePath powershell -ArgumentList $monitorArgumentString -WindowStyle Hidden -PassThru
     $monitorPid = $monitor.Id
 }
 
@@ -93,9 +122,12 @@ $meta = [ordered]@{
     train_episode = $TrainEpisode
     start_episode = $StartEpisode
     eval_episode = $EvalEpisode
-    resume_checkpoint = $ResumeCheckpoint
+    resume_checkpoint = $resumeCheckpointForManifest
     dry_run = [bool]$DryRun
     runner_args = $args
+    runner_argument_string = $runnerArgumentString
+    monitor_args = $monitorArgs
+    monitor_argument_string = $monitorArgumentString
     workload_pid = $workloadPid
     initial_workload_pid = $initialWorkloadPid
     workload_pid_source = $workloadPidSource

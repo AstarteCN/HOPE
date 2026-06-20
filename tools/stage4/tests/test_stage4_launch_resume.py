@@ -12,56 +12,42 @@ LAUNCHER = REPO_ROOT / "tools" / "stage4" / "launch_stage4_ogm.ps1"
 
 
 class Stage4LaunchResumeTests(unittest.TestCase):
-    def test_launcher_exposes_resume_parameters_and_forwards_them_to_runner(self) -> None:
-        launcher_text = LAUNCHER.read_text(encoding="utf-8")
+    def _launch_dry_run(self, temp_dir: str, resume_checkpoint: Path | None = None) -> dict:
+        command = [
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(LAUNCHER),
+            "-RunName",
+            "resume test",
+            "-TrainEpisode",
+            "30000",
+            "-StartEpisode",
+            "20000" if resume_checkpoint is not None else "0",
+            "-EvalEpisode",
+            "25",
+            "-ExpDirOverride",
+            temp_dir,
+            "-DryRun",
+        ]
+        if resume_checkpoint is not None:
+            command.extend(["-ResumeCheckpoint", str(resume_checkpoint)])
 
-        self.assertIn("[string]$ResumeCheckpoint", launcher_text)
-        self.assertIn("[int]$StartEpisode = 0", launcher_text)
-        self.assertIn("'--start_episode'", launcher_text)
-        self.assertIn("'--resume_checkpoint'", launcher_text)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=30)
 
-    def test_launcher_manifest_records_resume_parameters(self) -> None:
-        launcher_text = LAUNCHER.read_text(encoding="utf-8")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        manifest_path = Path(result.stdout.strip().splitlines()[-1])
+        self.assertEqual(manifest_path.parent, Path(temp_dir))
+        return json.loads(manifest_path.read_text(encoding="utf-8-sig"))
 
-        self.assertIn("resume_checkpoint = $ResumeCheckpoint", launcher_text)
-        self.assertIn("start_episode = $StartEpisode", launcher_text)
-
-    def test_launcher_dry_run_records_resume_manifest_and_runner_args_without_starting_training(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            resume_checkpoint = Path(temp_dir) / "SAC_19999.pt"
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-File",
-                    str(LAUNCHER),
-                    "-RunName",
-                    "resume test",
-                    "-TrainEpisode",
-                    "30000",
-                    "-StartEpisode",
-                    "20000",
-                    "-EvalEpisode",
-                    "25",
-                    "-ResumeCheckpoint",
-                    str(resume_checkpoint),
-                    "-ExpDirOverride",
-                    temp_dir,
-                    "-DryRun",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            self.assertEqual(result.returncode, 0, result.stderr)
-            manifest_path = Path(result.stdout.strip().splitlines()[-1])
-            self.assertEqual(manifest_path.parent, Path(temp_dir))
-
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+    def test_launcher_dry_run_records_resume_manifest_and_quoted_runner_args_with_spaces(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="stage4 launch ") as temp_dir:
+            resume_checkpoint = Path(temp_dir) / "resume checkpoints" / "SAC 19999.pt"
+            manifest = self._launch_dry_run(temp_dir, resume_checkpoint=resume_checkpoint)
             runner_args = manifest["runner_args"]
+            monitor_args = manifest["monitor_args"]
 
             self.assertTrue(manifest["dry_run"])
             self.assertIsNone(manifest["workload_pid"])
@@ -73,6 +59,22 @@ class Stage4LaunchResumeTests(unittest.TestCase):
             self.assertEqual(runner_args[runner_args.index("--start_episode") + 1], "20000")
             self.assertIn("--resume_checkpoint", runner_args)
             self.assertEqual(runner_args[runner_args.index("--resume_checkpoint") + 1], str(resume_checkpoint))
+            self.assertIn(str(resume_checkpoint), manifest["runner_argument_string"])
+            self.assertIn(f'"{resume_checkpoint}"', manifest["runner_argument_string"])
+            self.assertIn("--run_dir", runner_args)
+            self.assertIn(f'"{runner_args[runner_args.index("--run_dir") + 1]}"', manifest["runner_argument_string"])
+            self.assertIn("-OutputPath", monitor_args)
+            self.assertIn(f'"{monitor_args[monitor_args.index("-OutputPath") + 1]}"', manifest["monitor_argument_string"])
+
+    def test_launcher_dry_run_omits_resume_checkpoint_arg_for_fresh_run(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="stage4 launch ") as temp_dir:
+            manifest = self._launch_dry_run(temp_dir)
+            runner_args = manifest["runner_args"]
+
+            self.assertTrue(manifest["dry_run"])
+            self.assertEqual(manifest["start_episode"], 0)
+            self.assertIsNone(manifest["resume_checkpoint"])
+            self.assertNotIn("--resume_checkpoint", runner_args)
 
 
 if __name__ == "__main__":

@@ -84,6 +84,11 @@ def validate_episode_window(start_episode: int, train_episode: int) -> None:
         raise ValueError("start_episode must be less than train_episode; train_episode is the exclusive target.")
 
 
+def validate_resume_checkpoint_requirement(start_episode: int, checkpoint_path: str | None) -> None:
+    if start_episode > 0 and checkpoint_path is None:
+        raise ValueError("start_episode > 0 requires --resume_checkpoint or legacy --agent_ckpt.")
+
+
 def iter_global_episodes(start_episode: int, train_episode: int) -> range:
     validate_episode_window(start_episode, train_episode)
     return range(start_episode, train_episode)
@@ -220,6 +225,7 @@ def main() -> int:
     try:
         validate_episode_window(args.start_episode, args.train_episode)
         checkpoint_path = resolve_checkpoint_path(args)
+        validate_resume_checkpoint_requirement(args.start_episode, checkpoint_path)
     except ValueError as exc:
         print("error: %s" % exc, file=sys.stderr)
         return 2

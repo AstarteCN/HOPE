@@ -28,6 +28,7 @@ from tools.stage4.train_HOPE_sac_ogm import (  # noqa: E402
     periodic_checkpoint_name,
     resolve_checkpoint_path,
     validate_episode_window,
+    validate_resume_checkpoint_requirement,
 )
 
 
@@ -105,6 +106,14 @@ class Stage4RunnerConfigTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "start_episode"):
             validate_episode_window(start_episode=30001, train_episode=30000)
+
+    def test_validate_resume_checkpoint_requirement_rejects_resume_start_without_checkpoint(self) -> None:
+        with self.assertRaisesRegex(ValueError, "resume_checkpoint.*agent_ckpt"):
+            validate_resume_checkpoint_requirement(start_episode=20000, checkpoint_path=None)
+
+    def test_validate_resume_checkpoint_requirement_allows_fresh_or_checkpointed_runs(self) -> None:
+        validate_resume_checkpoint_requirement(start_episode=0, checkpoint_path=None)
+        validate_resume_checkpoint_requirement(start_episode=20000, checkpoint_path="SAC_19999.pt")
 
     def test_resolve_checkpoint_path_prefers_resume_checkpoint_and_keeps_agent_ckpt_compatibility(self) -> None:
         resume_args = argparse.Namespace(resume_checkpoint="resume.pt", agent_ckpt=None)
