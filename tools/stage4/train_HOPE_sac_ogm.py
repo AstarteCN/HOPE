@@ -69,6 +69,30 @@ def build_ogm_save_path(timestamp: str, run_dir: str | None = None) -> Path:
     return SRC_ROOT / "log" / "exp" / f"sac_ogm_{timestamp}"
 
 
+def resolve_checkpoint_path(args: argparse.Namespace) -> str | None:
+    resume_checkpoint = getattr(args, "resume_checkpoint", None)
+    agent_ckpt = getattr(args, "agent_ckpt", None)
+    if resume_checkpoint and agent_ckpt and resume_checkpoint != agent_ckpt:
+        raise ValueError("--resume_checkpoint and legacy --agent_ckpt differ; supply only one checkpoint path.")
+    return resume_checkpoint or agent_ckpt
+
+
+def validate_episode_window(start_episode: int, train_episode: int) -> None:
+    if start_episode < 0:
+        raise ValueError("start_episode must be greater than or equal to 0.")
+    if start_episode >= train_episode:
+        raise ValueError("start_episode must be less than train_episode; train_episode is the exclusive target.")
+
+
+def iter_global_episodes(start_episode: int, train_episode: int) -> range:
+    validate_episode_window(start_episode, train_episode)
+    return range(start_episode, train_episode)
+
+
+def periodic_checkpoint_name(global_episode: int) -> str:
+    return "SAC_%s.pt" % global_episode
+
+
 class SceneChoose:
     def __init__(self) -> None:
         self.scene_types = {
@@ -150,6 +174,8 @@ class DlpCaseChoose:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train Stage 4 HOPE SAC with OGM policy observations.")
     parser.add_argument("--agent_ckpt", type=str, default=None)
+    parser.add_argument("--resume_checkpoint", type=str, default=None)
+    parser.add_argument("--start_episode", type=int, default=0)
     parser.add_argument("--train_episode", type=int, default=100000)
     parser.add_argument("--eval_episode", type=int, default=2000)
     parser.add_argument("--verbose", type=bool, default=True)
@@ -174,6 +200,12 @@ def main() -> int:
     from model.agent.sac_agent import SACAgent as SAC
 
     args = _parse_args()
+    try:
+        validate_episode_window(args.start_episode, args.train_episode)
+        checkpoint_path = resolve_checkpoint_path(args)
+    except ValueError as exc:
+        print("error: %s" % exc, file=sys.stderr)
+        return 2
     verbose = args.verbose
 
     raw_env = CarParking(
@@ -208,7 +240,6 @@ def main() -> int:
     print("observation_space:", env.observation_space)
 
     rl_agent = SAC(configs)
-    checkpoint_path = args.agent_ckpt
     if checkpoint_path is not None:
         rl_agent.load(checkpoint_path, params_only=True)
         print("load pre-trained model!")
@@ -225,7 +256,7 @@ def main() -> int:
     total_step_num = 0
     best_success_rate = [0, 0, 0, 0]
 
-    for i in range(args.train_episode):
+    for i in iter_global_episodes(args.start_episode, args.train_episode):
         scene_chosen = scene_chooser.choose_case()
         if scene_chosen == "dlp":
             case_id = dlp_case_chooser.choose_case()
@@ -334,10 +365,10 @@ def main() -> int:
                 )
 
         if (i + 1) % 2000 == 0:
-            parking_agent.save(str(save_path / ("SAC_%s.pt" % i)), params_only=True)
+            parking_agent.save(str(save_path / periodic_checkpoint_name(i)), params_only=True)
 
         if verbose and i % 20 == 0:
-            episodes = [j for j in range(len(reward_list))]
+            episodes = [args.start_episode + j for j in range(len(reward_list))]
             mean_reward = [np.mean(reward_list[max(0, j - 50) : j + 1]) for j in range(len(reward_list))]
             plt.plot(episodes, reward_list)
             plt.plot(episodes, mean_reward)

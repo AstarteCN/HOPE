@@ -1,7 +1,9 @@
 param(
     [Parameter(Mandatory=$true)][string]$RunName,
     [int]$TrainEpisode = 100000,
+    [int]$StartEpisode = 0,
     [int]$EvalEpisode = 200,
+    [string]$ResumeCheckpoint,
     [string]$ChangedKnobsJson = '{"policy_inputs":"target+action_mask+ogm","rgb_bev_policy":false,"internal_lidar_for_action_mask":true}'
 )
 
@@ -32,11 +34,15 @@ $manifest = Join-Path -Path $ExpDir -ChildPath "$prefix.meta.json"
 $args = @(
     $TrainScript,
     '--train_episode', "$TrainEpisode",
+    '--start_episode', "$StartEpisode",
     '--eval_episode', "$EvalEpisode",
     '--run_dir', $RunDir,
     '--visualize=',
     '--verbose='
 )
+if (-not [string]::IsNullOrWhiteSpace($ResumeCheckpoint)) {
+    $args += @('--resume_checkpoint', $ResumeCheckpoint)
+}
 
 $workload = Start-Process -FilePath $Python -ArgumentList $args -WorkingDirectory $SrcDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
 
@@ -70,7 +76,9 @@ $meta = [ordered]@{
     run_name = $RunName
     candidate_type = 'stage4_ogm_proxy'
     train_episode = $TrainEpisode
+    start_episode = $StartEpisode
     eval_episode = $EvalEpisode
+    resume_checkpoint = $ResumeCheckpoint
     workload_pid = $workloadPid
     initial_workload_pid = $initialWorkloadPid
     workload_pid_source = $workloadPidSource

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 import unittest
@@ -21,6 +22,10 @@ from tools.stage4.train_HOPE_sac_ogm import (  # noqa: E402
     build_ogm_save_path,
     build_ogm_training_config,
     ensure_src_working_directory,
+    iter_global_episodes,
+    periodic_checkpoint_name,
+    resolve_checkpoint_path,
+    validate_episode_window,
 )
 
 
@@ -81,6 +86,43 @@ class Stage4RunnerConfigTests(unittest.TestCase):
             self.assertEqual(Path.cwd(), SRC_ROOT)
         finally:
             os.chdir(old_cwd)
+
+    def test_iter_global_episodes_preserves_fresh_run_schedule(self) -> None:
+        self.assertEqual(list(iter_global_episodes(start_episode=0, train_episode=5)), [0, 1, 2, 3, 4])
+
+    def test_iter_global_episodes_uses_resume_start_and_exclusive_target(self) -> None:
+        episodes = list(iter_global_episodes(start_episode=20000, train_episode=30000))
+
+        self.assertEqual(episodes[0], 20000)
+        self.assertEqual(episodes[-1], 29999)
+        self.assertEqual(len(episodes), 10000)
+
+    def test_validate_episode_window_rejects_start_at_or_after_target(self) -> None:
+        with self.assertRaisesRegex(ValueError, "start_episode"):
+            validate_episode_window(start_episode=30000, train_episode=30000)
+
+        with self.assertRaisesRegex(ValueError, "start_episode"):
+            validate_episode_window(start_episode=30001, train_episode=30000)
+
+    def test_resolve_checkpoint_path_prefers_resume_checkpoint_and_keeps_agent_ckpt_compatibility(self) -> None:
+        resume_args = argparse.Namespace(resume_checkpoint="resume.pt", agent_ckpt=None)
+        legacy_args = argparse.Namespace(resume_checkpoint=None, agent_ckpt="legacy.pt")
+        matching_args = argparse.Namespace(resume_checkpoint="same.pt", agent_ckpt="same.pt")
+        fresh_args = argparse.Namespace(resume_checkpoint=None, agent_ckpt=None)
+
+        self.assertEqual(resolve_checkpoint_path(resume_args), "resume.pt")
+        self.assertEqual(resolve_checkpoint_path(legacy_args), "legacy.pt")
+        self.assertEqual(resolve_checkpoint_path(matching_args), "same.pt")
+        self.assertIsNone(resolve_checkpoint_path(fresh_args))
+
+    def test_resolve_checkpoint_path_rejects_conflicting_resume_names(self) -> None:
+        args = argparse.Namespace(resume_checkpoint="resume.pt", agent_ckpt="legacy.pt")
+
+        with self.assertRaisesRegex(ValueError, "resume_checkpoint.*agent_ckpt"):
+            resolve_checkpoint_path(args)
+
+    def test_periodic_checkpoint_name_uses_global_episode_number(self) -> None:
+        self.assertEqual(periodic_checkpoint_name(29999), "SAC_29999.pt")
 
 
 if __name__ == "__main__":
