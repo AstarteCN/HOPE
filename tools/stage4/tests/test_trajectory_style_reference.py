@@ -64,6 +64,23 @@ class TrajectoryStyleReferenceTests(unittest.TestCase):
         self.assertGreaterEqual(len(references[0].waypoints), 5)
         self.assertIn("reverse_entry", references[0].phase_labels)
 
+    def test_perpendicular_limited_reference_uses_straighten_phase(self):
+        trace = _trace(
+            "perpendicular_limited",
+            "perpendicular",
+            Pose2D(0.0, -3.0, 1.57),
+            Pose2D(0.0, 0.0, 1.57),
+            obstacles=[[[1.0, -2.0], [2.0, -2.0], [2.0, 0.0], [1.0, 0.0]]],
+        )
+
+        references = generate_reference_families(trace, classify_scene(trace))
+
+        self.assertEqual(
+            references[0].phase_labels,
+            ["approach", "reverse_entry", "planned_correction", "straighten"],
+        )
+        self.assertNotIn("late_straighten", references[0].phase_labels)
+
 
 if __name__ == "__main__":
     unittest.main()

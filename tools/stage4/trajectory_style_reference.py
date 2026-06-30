@@ -206,7 +206,7 @@ _REFERENCE_SPECS: dict[str, dict[str, Any]] = {
     },
     "perpendicular_limited_space": {
         "route_family": "planned_cusp_reverse",
-        "phase_labels": ["approach", "reverse_entry", "planned_correction", "late_straighten"],
+        "phase_labels": ["approach", "reverse_entry", "planned_correction", "straighten"],
         "expected_cusp_count": (1, 2),
         "expected_gear_shift_count": (1, 3),
         "clearance_preferences": ClearancePreferences(
