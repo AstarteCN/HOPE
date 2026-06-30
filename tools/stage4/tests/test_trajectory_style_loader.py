@@ -90,6 +90,14 @@ class TrajectoryStyleLoaderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "path_length_m"):
             load_trajectory_traces(path)
 
+    def test_rejects_nan_nested_in_action_selection_metric(self):
+        trace = build_fixture_trace(frame_count=1)
+        trace["summary"]["action_selection"] = {"bad": float("nan")}
+        path = self._write_trace(trace)
+
+        with self.assertRaisesRegex((ValueError, TypeError), "action_selection"):
+            load_trajectory_traces(path)
+
     def test_missing_planner_route_active_defaults_false(self):
         trace = build_fixture_trace(frame_count=2)
         for frame in trace["frames"]:

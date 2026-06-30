@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import os
 from json import JSONDecodeError
 from pathlib import Path
+from numbers import Real
 from typing import Any, Mapping, Sequence
 
 from tools.stage4.trajectory_style_schema import (
@@ -20,7 +22,6 @@ NUMERIC_RAW_METRIC_KEYS = (
     "total_reward",
 )
 
-OUTCOME_KEYS = ("success", "terminal_status", "truncated_by_max_steps")
 ACTION_KEYS = ("applied_model", "raw_model", "model", "env")
 
 
@@ -176,8 +177,27 @@ def _raw_metrics(summary: Mapping[str, Any]) -> dict[str, Any]:
         if key in summary:
             metrics[key] = finite_float(summary[key], key)
     if "action_selection" in summary:
-        metrics["action_selection"] = summary["action_selection"]
+        metrics["action_selection"] = _json_safe_metric(summary["action_selection"], "action_selection")
     return metrics
+
+
+def _json_safe_metric(value: Any, field_name: str) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _json_safe_metric(item, f"{field_name}.{key}")
+            for key, item in value.items()
+        }
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_metric(item, field_name) for item in value]
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        return finite_float(value, field_name)
+    if isinstance(value, Real) and not isinstance(value, bool):
+        return finite_float(value, field_name)
+    if isinstance(value, os.PathLike):
+        return os.fspath(value)
+    raise TypeError(f"{field_name} contains unsupported value: {type(value).__name__}")
 
 
 def _obstacles(static_geometry: Mapping[str, Any]) -> list[list[list[float]]]:
