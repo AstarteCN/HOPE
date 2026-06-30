@@ -13,6 +13,10 @@ from tools.stage4.trajectory_style_schema import (
 
 
 class TrajectoryStyleSchemaTests(unittest.TestCase):
+    class UnsafeToDict:
+        def to_dict(self):
+            return {"bad": object()}
+
     def _make_trace(self, **overrides):
         values = {
             "case_uid": "parallel_001",
@@ -46,6 +50,23 @@ class TrajectoryStyleSchemaTests(unittest.TestCase):
         }
         values.update(overrides)
         return StyleCaseReport(**values)
+
+    def _make_reference(self, **overrides):
+        values = {
+            "family_id": "parallel_standard_reverse_s_curve",
+            "scene_class": "parallel_standard",
+            "route_family": "reverse_s_curve",
+            "waypoints": [Pose2D(0.0, 0.0, 0.0), Pose2D(5.0, 1.0, 0.0)],
+            "corridor": {"radius_m": 1.0},
+            "phase_labels": ["approach", "reverse_entry"],
+            "expected_cusp_count": (0, 1),
+            "expected_gear_shift_count": (1, 2),
+            "slot_mouth_pose_window": {"heading_error_rad": 0.4},
+            "clearance_preferences": ClearancePreferences(min_clearance_m=0.3, preferred_side="away_from_obstacle"),
+            "generation_method": "analytic_v1",
+        }
+        values.update(overrides)
+        return ReferenceFamily(**values)
 
     def test_pose_from_mapping_requires_finite_xy_heading(self):
         pose = pose_from_mapping({"x": 1, "y": -2, "heading": 0.5, "speed": -1.0})
@@ -163,6 +184,21 @@ class TrajectoryStyleSchemaTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "confidence"):
             classification.to_dict()
+
+    def test_delegated_to_dict_results_are_recursively_validated(self):
+        trace = self._make_trace(raw_metrics={"delegated": self.UnsafeToDict()})
+        report = self._make_report(shape_metrics={"delegated": self.UnsafeToDict()})
+
+        with self.assertRaisesRegex((TypeError, ValueError), "JSON-safe"):
+            trace.to_dict()
+        with self.assertRaisesRegex((TypeError, ValueError), "JSON-safe"):
+            report.to_dict()
+
+    def test_reference_phase_labels_reject_non_string_values_during_to_dict(self):
+        reference = self._make_reference(phase_labels=[object()])
+
+        with self.assertRaisesRegex((TypeError, ValueError), "phase_labels"):
+            reference.to_dict()
 
 
 if __name__ == "__main__":

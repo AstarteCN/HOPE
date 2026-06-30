@@ -40,7 +40,7 @@ def finite_float(value: Any, field_name: str) -> float:
 
 def _json_safe(value: Any, field_name: str = "value") -> Any:
     if hasattr(value, "to_dict"):
-        return value.to_dict()
+        return _json_safe(value.to_dict(), field_name)
     if isinstance(value, Mapping):
         return {
             str(key): _json_safe(value[key], f"{field_name}.{key}")
