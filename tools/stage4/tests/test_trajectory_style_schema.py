@@ -13,6 +13,22 @@ from tools.stage4.trajectory_style_schema import (
 
 
 class TrajectoryStyleSchemaTests(unittest.TestCase):
+    def _make_trace(self, **overrides):
+        values = {
+            "case_uid": "parallel_001",
+            "source_trace_path": "trace.json",
+            "scene_type": "Sim-Complex",
+            "slot_type": "parallel",
+            "start_pose": Pose2D(0.0, 0.0, 0.0),
+            "target_pose": Pose2D(5.0, 1.0, 0.0),
+            "poses": [Pose2D(0.0, 0.0, 0.0)],
+            "actions": [[0.1, -0.5]],
+            "action_sources": ["RL"],
+            "planner_route_active": [False],
+        }
+        values.update(overrides)
+        return TrajectoryTrace(**values)
+
     def _make_report(self, **overrides):
         values = {
             "case_uid": "parallel_001",
@@ -123,6 +139,30 @@ class TrajectoryStyleSchemaTests(unittest.TestCase):
             trace.to_dict()
         with self.assertRaisesRegex(TypeError, "JSON-safe"):
             report.to_dict()
+
+    def test_action_sources_reject_non_string_values_during_to_dict(self):
+        trace = self._make_trace(action_sources=[object()])
+
+        with self.assertRaisesRegex((TypeError, ValueError), "action_sources"):
+            trace.to_dict()
+
+    def test_report_diagnosis_rejects_non_string_values_during_to_dict(self):
+        report = self._make_report(diagnosis=[object()])
+
+        with self.assertRaisesRegex((TypeError, ValueError), "diagnosis"):
+            report.to_dict()
+
+    def test_planner_route_active_rejects_non_bool_values_during_to_dict(self):
+        trace = self._make_trace(planner_route_active=[object()])
+
+        with self.assertRaisesRegex((TypeError, ValueError), "planner_route_active"):
+            trace.to_dict()
+
+    def test_scene_classification_rejects_non_finite_confidence(self):
+        classification = SceneClassification("parallel_standard", "ok", float("nan"))
+
+        with self.assertRaisesRegex(ValueError, "confidence"):
+            classification.to_dict()
 
 
 if __name__ == "__main__":

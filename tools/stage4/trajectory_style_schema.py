@@ -66,6 +66,24 @@ def _validate_known(value: str, known_values: frozenset[str], field_name: str) -
         raise ValueError(f"{field_name} must be one of {sorted(known_values)}")
 
 
+def _string_sequence(values: Sequence[Any], field_name: str) -> list[str]:
+    result: list[str] = []
+    for index, value in enumerate(values):
+        if not isinstance(value, str):
+            raise TypeError(f"{field_name}[{index}] must be a string")
+        result.append(value)
+    return result
+
+
+def _bool_sequence(values: Sequence[Any], field_name: str) -> list[bool]:
+    result: list[bool] = []
+    for index, value in enumerate(values):
+        if not isinstance(value, bool):
+            raise TypeError(f"{field_name}[{index}] must be a bool")
+        result.append(value)
+    return result
+
+
 @dataclass(frozen=True)
 class Pose2D:
     x: float
@@ -129,8 +147,8 @@ class TrajectoryTrace:
             "target_pose": self.target_pose.to_dict(),
             "poses": [pose.to_dict() for pose in self.poses],
             "actions": [[finite_float(value, "action") for value in action] for action in self.actions],
-            "action_sources": list(self.action_sources),
-            "planner_route_active": [bool(value) for value in self.planner_route_active],
+            "action_sources": _string_sequence(self.action_sources, "action_sources"),
+            "planner_route_active": _bool_sequence(self.planner_route_active, "planner_route_active"),
             "obstacles": _json_safe(list(self.obstacles)),
             "outcome": _json_safe(self.outcome),
             "raw_metrics": _json_safe(self.raw_metrics),
@@ -159,7 +177,7 @@ class ReferenceFamily:
             "route_family": self.route_family,
             "waypoints": [pose.to_dict() for pose in self.waypoints],
             "corridor": _json_safe(self.corridor),
-            "phase_labels": list(self.phase_labels),
+            "phase_labels": _string_sequence(self.phase_labels, "phase_labels"),
             "expected_cusp_count": list(self.expected_cusp_count),
             "expected_gear_shift_count": list(self.expected_gear_shift_count),
             "slot_mouth_pose_window": _json_safe(self.slot_mouth_pose_window),
@@ -221,7 +239,7 @@ class StyleCaseReport:
             "segment_metrics": _json_safe(self.segment_metrics),
             "style_label": self.style_label,
             "style_score": finite_float(self.style_score, "style_score"),
-            "diagnosis": list(self.diagnosis),
+            "diagnosis": _string_sequence(self.diagnosis, "diagnosis"),
             "unsupported_reason": self.unsupported_reason,
         }
 
