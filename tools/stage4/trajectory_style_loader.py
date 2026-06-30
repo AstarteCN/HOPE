@@ -13,12 +13,11 @@ from tools.stage4.trajectory_style_schema import (
 )
 
 
-RAW_METRIC_KEYS = (
+NUMERIC_RAW_METRIC_KEYS = (
     "path_length_m",
     "step_count",
     "gear_shifts",
     "total_reward",
-    "action_selection",
 )
 
 OUTCOME_KEYS = ("success", "terminal_status", "truncated_by_max_steps")
@@ -74,7 +73,7 @@ def _normalize_trace(raw_trace: Mapping[str, Any], source_path: Path, trace_inde
     frames = _sequence(raw_trace.get("frames"), f"trace[{trace_index}].frames")
     summary = _mapping(raw_trace.get("summary", {}), f"trace[{trace_index}].summary")
 
-    case_uid = str(case["case_uid"])
+    case_uid = _case_uid(case)
     poses = [_pose_from_frame(frame, trace_index, frame_index) for frame_index, frame in enumerate(frames)]
     start_pose = poses[0] if poses else Pose2D(0.0, 0.0, 0.0)
     final_pose = poses[-1] if poses else start_pose
@@ -88,7 +87,9 @@ def _normalize_trace(raw_trace: Mapping[str, Any], source_path: Path, trace_inde
         status = _mapping(frame_mapping.get("status", {}), f"trace[{trace_index}].frames[{frame_index}].status")
         actions.append(_action_values(action, trace_index, frame_index))
         action_sources.append(str(action.get("source", "unknown")))
-        planner_route_active.append(_bool_value(status.get("planner_route_active", False)))
+        planner_route_active.append(
+            _planner_route_active(status.get("planner_route_active", False), trace_index, frame_index)
+        )
 
     return TrajectoryTrace(
         case_uid=case_uid,
@@ -102,9 +103,16 @@ def _normalize_trace(raw_trace: Mapping[str, Any], source_path: Path, trace_inde
         action_sources=action_sources,
         planner_route_active=planner_route_active,
         obstacles=_obstacles(static_geometry),
-        outcome={key: summary[key] for key in OUTCOME_KEYS if key in summary},
-        raw_metrics={key: summary[key] for key in RAW_METRIC_KEYS if key in summary},
+        outcome=_outcome(summary),
+        raw_metrics=_raw_metrics(summary),
     )
+
+
+def _case_uid(case: Mapping[str, Any]) -> str:
+    value = case.get("case_uid")
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("case_uid must be a non-empty string")
+    return value
 
 
 def _mapping(value: Any, field_name: str) -> Mapping[str, Any]:
@@ -133,10 +141,43 @@ def _action_values(action: Mapping[str, Any], trace_index: int, frame_index: int
     raise ValueError(f"trace[{trace_index}].frames[{frame_index}].action must include a model or env action")
 
 
-def _bool_value(value: Any) -> bool:
-    if isinstance(value, bool):
-        return value
-    return bool(value)
+def _planner_route_active(value: Any, trace_index: int, frame_index: int) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"trace[{trace_index}].frames[{frame_index}].status.planner_route_active must be a bool")
+    return value
+
+
+def _outcome(summary: Mapping[str, Any]) -> dict[str, Any]:
+    outcome: dict[str, Any] = {}
+    if "success" in summary:
+        outcome["success"] = _summary_bool(summary["success"], "success")
+    if "terminal_status" in summary:
+        value = summary["terminal_status"]
+        if value is not None and not isinstance(value, str):
+            raise ValueError("terminal_status must be a string or None")
+        outcome["terminal_status"] = value
+    if "truncated_by_max_steps" in summary:
+        outcome["truncated_by_max_steps"] = _summary_bool(
+            summary["truncated_by_max_steps"],
+            "truncated_by_max_steps",
+        )
+    return outcome
+
+
+def _summary_bool(value: Any, field_name: str) -> bool:
+    if not isinstance(value, bool):
+        raise ValueError(f"{field_name} must be a bool")
+    return value
+
+
+def _raw_metrics(summary: Mapping[str, Any]) -> dict[str, Any]:
+    metrics: dict[str, Any] = {}
+    for key in NUMERIC_RAW_METRIC_KEYS:
+        if key in summary:
+            metrics[key] = finite_float(summary[key], key)
+    if "action_selection" in summary:
+        metrics["action_selection"] = summary["action_selection"]
+    return metrics
 
 
 def _obstacles(static_geometry: Mapping[str, Any]) -> list[list[list[float]]]:
@@ -167,12 +208,53 @@ def _target_pose(static_geometry: Mapping[str, Any], final_pose: Pose2D) -> Pose
     if not points:
         return final_pose
 
-    xs: list[float] = []
-    ys: list[float] = []
+    points_xy: list[tuple[float, float]] = []
     for point_index, raw_point in enumerate(points):
         point = _sequence(raw_point, f"static_geometry.target_polygon[{point_index}]")
         if len(point) < 2:
             raise ValueError(f"static_geometry.target_polygon[{point_index}] must have x and y")
-        xs.append(finite_float(point[0], "target.x"))
-        ys.append(finite_float(point[1], "target.y"))
-    return Pose2D(sum(xs) / len(xs), sum(ys) / len(ys), final_pose.heading)
+        points_xy.append((finite_float(point[0], "target.x"), finite_float(point[1], "target.y")))
+
+    centroid = _polygon_centroid(points_xy)
+    if centroid is None:
+        centroid = _average_point(_without_repeated_closure(points_xy))
+    if centroid is None:
+        return final_pose
+    return Pose2D(centroid[0], centroid[1], final_pose.heading)
+
+
+def _polygon_centroid(points: Sequence[tuple[float, float]]) -> tuple[float, float] | None:
+    if len(points) < 3:
+        return None
+
+    signed_area_twice = 0.0
+    centroid_x_numerator = 0.0
+    centroid_y_numerator = 0.0
+    for index, (x0, y0) in enumerate(points):
+        x1, y1 = points[(index + 1) % len(points)]
+        cross = x0 * y1 - x1 * y0
+        signed_area_twice += cross
+        centroid_x_numerator += (x0 + x1) * cross
+        centroid_y_numerator += (y0 + y1) * cross
+
+    if signed_area_twice == 0.0:
+        return None
+    return (
+        centroid_x_numerator / (3.0 * signed_area_twice),
+        centroid_y_numerator / (3.0 * signed_area_twice),
+    )
+
+
+def _without_repeated_closure(points: Sequence[tuple[float, float]]) -> Sequence[tuple[float, float]]:
+    if len(points) > 1 and points[0] == points[-1]:
+        return points[:-1]
+    return points
+
+
+def _average_point(points: Sequence[tuple[float, float]]) -> tuple[float, float] | None:
+    if not points:
+        return None
+    return (
+        sum(point[0] for point in points) / len(points),
+        sum(point[1] for point in points) / len(points),
+    )
