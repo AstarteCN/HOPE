@@ -80,13 +80,22 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
+        if args.reference_annotations:
+            raise ValueError("--reference-annotations is not implemented in this P0 CLI")
+        if args.visualization_dir:
+            raise ValueError("--visualization-dir is not implemented in this P0 CLI")
+
         traces = load_trajectory_traces(args.trace_json)
         if args.case_filter:
+            original_count = len(traces)
             traces = [trace for trace in traces if args.case_filter in trace.case_uid]
+            if not traces:
+                raise ValueError(
+                    "--case-filter %r matched zero traces out of %d"
+                    % (args.case_filter, original_count)
+                )
 
         scene_labels = _load_scene_labels(args.scene_labels)
-        if args.reference_annotations:
-            _load_json_object(args.reference_annotations, "reference annotations")
 
         report = evaluate_batch(
             traces,

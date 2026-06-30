@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Any, Mapping, Sequence
@@ -11,6 +13,9 @@ from tools.stage4.trajectory_style_schema import StyleCaseReport, TrajectoryTrac
 
 
 SCHEMA_VERSION = "trajectory-style-eval-v1"
+WINDOWS_RESERVED_FILENAMES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", *(f"COM{index}" for index in range(1, 10)), *(f"LPT{index}" for index in range(1, 10))}
+)
 
 
 def evaluate_batch(
@@ -20,6 +25,7 @@ def evaluate_batch(
     label_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     allowed_slot_types = {slot_type.lower() for slot_type in slot_types}
+    cases: list[dict[str, Any]] = []
     supported_cases: list[dict[str, Any]] = []
     unsupported_cases: list[dict[str, Any]] = []
     scene_class_counts: Counter[str] = Counter()
@@ -34,6 +40,7 @@ def evaluate_batch(
             case_report = evaluate_trace_style(trace, classification, references)
 
         case_payload = case_report.to_dict()
+        cases.append(case_payload)
         scene_class_counts[case_payload["scene_class"]] += 1
         if case_payload["unsupported_reason"] is None:
             supported_cases.append(case_payload)
@@ -52,7 +59,7 @@ def evaluate_batch(
         "unsupported_case_count": len(unsupported_cases),
         "scene_class_counts": dict(sorted(scene_class_counts.items())),
         "top_style_mismatches": top_style_mismatches,
-        "cases": supported_cases,
+        "cases": cases,
         "unsupported_cases": unsupported_cases,
     }
 
@@ -63,12 +70,21 @@ def write_json_reports(report: Mapping[str, Any], output_dir: str | Path) -> Non
     case_summary_dir = output_path / "case_summaries"
     case_summary_dir.mkdir(parents=True, exist_ok=True)
 
+    case_paths: list[tuple[Path, Mapping[str, Any]]] = []
+    seen_case_summary_names: set[str] = set()
+    for case in report.get("cases", []):
+        case_uid = str(case["case_uid"])
+        case_path = _case_summary_path(case_summary_dir, case_uid)
+        if case_path.name in seen_case_summary_names:
+            raise ValueError(f"duplicate case summary filename after sanitizing case_uid: {case_path.name}")
+        seen_case_summary_names.add(case_path.name)
+        case_paths.append((case_path, case))
+
     _write_json(output_path / "style_eval_report.json", report)
     _write_json(output_path / "unsupported_cases.json", report.get("unsupported_cases", []))
 
-    for case in list(report.get("cases", [])) + list(report.get("unsupported_cases", [])):
-        case_uid = str(case["case_uid"])
-        _write_json(case_summary_dir / f"{case_uid}.json", case)
+    for case_path, case in case_paths:
+        _write_json(case_path, case)
 
 
 def write_markdown_report(report: Mapping[str, Any], output_dir: str | Path) -> None:
@@ -143,9 +159,36 @@ def _filtered_out_report(trace: TrajectoryTrace, reason: str) -> StyleCaseReport
 
 def _write_json(path: Path, payload: Any) -> None:
     path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, allow_nan=False),
+        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+
+
+def _case_summary_path(case_summary_dir: Path, case_uid: str) -> Path:
+    filename = _case_summary_filename(case_uid)
+    root = case_summary_dir.resolve()
+    candidate = (case_summary_dir / filename).resolve()
+    if candidate.parent != root:
+        raise ValueError(f"unsafe case_uid for case summary path: {case_uid!r}")
+    return candidate
+
+
+def _case_summary_filename(case_uid: str) -> str:
+    safe_stem = re.sub(r"[^A-Za-z0-9._-]+", "_", case_uid).strip("._")
+    changed = safe_stem != case_uid
+    if not safe_stem:
+        safe_stem = "case"
+        changed = True
+
+    stem_for_reserved_check = safe_stem.split(".", 1)[0].upper()
+    if stem_for_reserved_check in WINDOWS_RESERVED_FILENAMES:
+        changed = True
+
+    if changed:
+        digest = hashlib.sha1(case_uid.encode("utf-8")).hexdigest()[:10]
+        safe_stem = f"{safe_stem}_{digest}"
+
+    return f"{safe_stem}.json"
 
 
 def _case_markdown_lines(case: Mapping[str, Any]) -> list[str]:

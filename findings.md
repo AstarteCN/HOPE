@@ -1,294 +1,154 @@
-# Findings & Decisions
+# Findings: HOPE Trajectory Style Evaluation Toolkit
 
-## Requirements
+## Current Task
 
-- Current safe-speed framework status: Tasks 1-10 are implemented; final verification and final code review passed.
-- Future speed tests covered by this PRD use `20K` training episodes as the validation budget.
-- The comparison baseline for future 20K tests is the current command-only 20K result: run dir `D:\Github\HOPE\src\log\exp\sac_20260619_004316`, checkpoint `SAC_19999.pt`.
-- Stage 3 objective: retrain the original HOPE agent locally while researching hardware utilization, bottlenecks, and training-quality monitoring.
-- Avoid global Python environment contamination.
-- Use the isolated project `.venv`.
-- Use `planning-with-files` to keep task plan, findings, and progress on disk.
-- Stay within the original HOPE training framework.
-- Do not begin OGM implementation work.
-- Measure current hardware utilization before performance changes.
-- If utilization is poor, identify bottlenecks before modifying code.
-- Improve resource utilization only with training-quality safeguards.
-- Smoke and optimization-validation runs should cover at least 40,000 training episodes, roughly 40% of the original author's 100,000-episode training scale.
-- TensorBoard indicators must be monitored during training and summarized for early-warning failure modes.
-- User-approved exception for the current command-only long run: stop around 20K episodes as a smoke-quality check because the observed long-run speed gain is limited.
-- Future speed research must preserve the HOPE paper's core design intent: action masks, curriculum and scene scheduling, observation/action/reward semantics, environment dynamics, and hybrid policy/path-planning framing.
-- Stage 3 speed research is now closed at the accepted `hope-fast-action-mask-20k` milestone. The user confirmed the fast action-mask 20K speedup and training quality as accepted on 2026-06-20.
-- Next major design target: an OGM-integration PRD that uses HOPE as the base project, makes RL-OGM-Parking the main direction, and targets OGM-paper final training values within a `+-3%` acceptance band using `100K episodes +-20%` training budget.
+The active task is to productize a P0 offline evaluator for human-like parking trajectory shape in Stage 4 HOPE+OGM.
 
-## Research Findings
+Standalone PRD:
 
-- PRD written at `docs/superpowers/specs/2026-06-19-hope-stage3-safe-speed-20k-prd.md`.
-- The PRD locks baseline metrics for future 20K candidate comparisons: `12.964 h`, `1545.71` episodes/hour, `39.10` environment steps/second, average process CPU `37.76%`, average whole-GPU `29.42%`, and external eval Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`.
-- Fast action-mask 20K candidate result: run `D:\Github\HOPE\src\log\exp\sac_20260620_085208` reached `SAC_19999.pt` and passed the saved command-only 20K gates. Corrected time-to-checkpoint speed was `10.947863 h`, `1826.840564` episodes/hour, and `46.223481` environment steps/second, improving over the command-only 20K baseline by `15.55%`, `18.19%`, and `18.22%` respectively.
-- Fast action-mask 20K matched external eval exactly equaled the command-only 20K baseline: Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`. This supports "no observed 20K quality regression" for the default-off fast action-mask path when enabled through the opt-in wrapper.
-- Compared with the stopped 36.5K baseline reference Normal `1.000`, Complex `0.985`, Extrem `0.915`, DLP `0.955`, mean `0.96375`, the fast action-mask 20K checkpoint remains lower mainly on Extrem and mean success. This is a 20K maturity caveat, not a 36.5K equivalence claim.
-- Accepted baseline milestone: `hope-fast-action-mask-20k` should be treated as the local speed/quality anchor for future OGM planning unless a later long-run baseline supersedes it.
-- OGM PRD framing from user: integrate OGM paper core technical points into the HOPE main project, with HOPE as base and OGM as the main research direction; final acceptance should compare against OGM paper reported results with a `+-3%` tolerance and allow training budget variation from `80K` to `120K` episodes.
-- OGM paper Table I final simulation targets extracted from the local PDF: Hybrid RL (ours) reports Sim-Normal PSR `99.33%`, ANGS `1.5`, PL `20.3m`; Sim-Complex PSR `97.7%`, ANGS `1.9`, PL `23.6m`; Real-World dataset PSR `87.2%`, ANGS `2.6`, PL `28.3m`.
-- OGM paper Table II real-world dataset path metrics extracted from the local PDF: Simple NGS `0`, PL `12.63m`; Normal NGS `1`, PL `14.39m`; Extreme NGS `6`, PL `16.31m` for Hybrid RL (ours).
-- OGM paper Table III real-vehicle targets extracted from the local PDF: Long-Distance Perpendicular PSR `100%`, AOT `35s`, ANGS `1`; Long-Distance Parallel PSR `85%`, AOT `59s`, ANGS `1`; Narrow Dead-End PSR `60%`, AOT `85s`, ANGS `8.5`. These require real OGM/perception data to reproduce literally and should be separated from local proxy-OGM acceptance.
-- User clarification for OGM PRD acceptance: real-vehicle testing is out of scope for this round; only simulation-environment KPIs should be used as acceptance criteria.
-- Local dataset availability check: the current repository only contains `data/dlp.data` as a geometry-based DLP scenario file. No real-world OGM grids, global/local OGM maps, LiDAR/IMU logs, point clouds, `.npz`, `.npy`, `.pcd`, `.ply`, or bag-style OGM dataset files were found. Therefore the OGM paper's Real-World dataset KPI row should not be included in this round's acceptance criteria unless a real OGM dataset is later provided.
-- User selected OGM PRD input option A for the first version: policy input should be `ogm + target + action_mask`; RGB BEV should be disabled for the OGM policy; lidar remains available internally only as a helper for the existing HOPE action-mask generation.
-- User selected OGM PRD evaluation dataset option C: create an OGM-style fixed simulation evaluation set with `20` parallel and `50` perpendicular scenarios for hard acceptance, while continuing to report HOPE Normal/Complex as compatibility/regression metrics.
-- User selected OGM PRD KPI tolerance option A: apply relative `+-3%` acceptance bands to every hard simulation KPI, including PSR, ANGS, and PL, rather than using one-sided "better is always acceptable" thresholds.
-- User selected target representation option B: do not fix the current `cos(phi), cos(phi)` target representation in the first OGM PRD version; record it as a known risk and separate future experiment so the OGM effect is not confounded with a target-representation change.
-- User selected PRD approach 1: Proxy OGM First with strict simulation KPI gates. The PRD should implement OGM as a first-class observation branch in HOPE, use `ogm + target + action_mask` policy input, evaluate on fixed OGM-style simulation scenarios, and defer real-world OGM dataset acceptance until real OGM data exists.
-- Approved OGM Proxy PRD written to `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md`. It is design-only and explicitly gates the next step on user review plus conversion into a `superpowers:writing-plans` implementation plan.
-- OGM Proxy implementation plan written to `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md`.
-- Stage 4 OGM validation policy: use 20K episodes as the first gate against `hope-fast-action-mask-20k`. The OGM run may be weaker than the HOPE 20K baseline early, but TensorBoard/eval trends must improve. After 20K, monitor every 10K episodes. If a gate shows stagnation, regression, or clearly unreachable trajectory, allow exactly one more 10K grace window; if the next gate does not improve, stop before forcing 100K/120K and debug using TensorBoard, eval, and implementation evidence. Restart from scratch when observation/rasterizer/reward/network/state-norm semantics changed; resume from checkpoint only for logging, monitoring, or evaluation-only fixes.
-- Stage 4 checkpoint continuation gap found and closed during goal execution: the initial OGM runner only had a manual `--agent_ckpt` warm start and would have reset TensorBoard/checkpoint episode numbering after 20K. Subagent-driven work added Stage4-only `--resume_checkpoint`, `--start_episode`, launcher `-ResumeCheckpoint`, and launcher `-StartEpisode` support, plus tests and Windows quoting hardening.
-- Stage 4 continuation remains checkpoint-based, not full process resume. It preserves model parameters and global episode/checkpoint/TensorBoard numbering for gate cadence, but it does not restore replay buffer, RNG state, scene chooser/DLP chooser state, reward history, or `total_step_num`. Use restart-from-scratch when OGM semantics change; use checkpoint continuation only for accepted 20K gate onward or non-semantic tooling fixes.
-- Stage 4 continuation verification passed after two review loops: `tools/stage3/tests tools/stage4/tests` ran with `99 passed`, spec review passed, and code-quality review approved the PowerShell argument quoting and positive-`start_episode` checkpoint validation.
-- OGM paper implementation context extracted from the local PDF: the model was trained with simulation and real-world datasets for `8 hours` on an RTX 4090 workstation, and deployed with average inference time `17.2ms` on an RTX 2060 / Intel i7 NUC. This is useful as an engineering reference, but the user-defined local training budget is `100K +-20%` episodes.
-- HOPE paper local baseline context extracted from the local PDF: HOPE reports `100,000` training episodes and `2,000` test trials per scenario category. HOPE(SAC) Table II reports V(N) `100.0%`, P(N) `99.7%`, V(C) `100.0%`, P(C) `99.4%`, P(E) `97.5%`, D(N) `99.4%`, D(C) `98.0%`.
-- Current code anchors for OGM PRD: `CarParking.render()` returns `img`, `lidar`, `target`, and `action_mask`; `ActionMask` currently depends on lidar; `MultiObsEmbedding` can accept a new image-like token but currently only has lidar/target/action_mask/img branches; `StateNorm.DEFAULT_UPDATE_MODAL` must be extended for `ogm`; `eval_utils.py` already records success, step count, reward, and path length but not gear-shift or AOT-style metrics.
-- The PRD defines candidate labels: `pass`, `quality-pass-speed-neutral`, `investigate`, and `reject`.
-- The PRD defines the 20K quality gate as external eval mean at least `0.85625`, Normal at least `0.95`, Complex at least `0.90`, Extrem at least `0.58`, DLP at least `0.91`, finite losses, and no new multi-scene collapse pattern.
-- The PRD defines the 20K speed gate as at least `10%` improvement in wall-clock time to 20K, environment steps/second, or episodes/hour when episode-rate gain is not explained by lower policy quality.
-- The Stage 3 safe-speed 20K framework tooling has been implemented under `tools/stage3/`, covering baseline constants, manifests, TensorBoard summaries, result parsing, comparisons, parity/profiling, launch/stop/eval wrappers, and tests while keeping original HOPE source paths protected.
-- Final safe-speed framework verification passed 28 Stage 3 tool tests, PowerShell wrapper parser checks, command-only 20K TensorBoard summary export, parity/profile smoke checks, a compare dry-run, `git diff --check`, and `git diff -- src/train src/env src/model`. Final code review found no remaining blocking issues after the stop-wrapper and comparison-gate fixes.
-- Safe-speed framework sync: commit `d4eec63` (`Add Stage 3 safe speed tooling`) was pushed to `origin/codex/stage3-resource-study`; draft PR `https://github.com/AstarteCN/HOPE/pull/1` tracks the work in the user's fork.
-- Fresh bounded profiler traces were collected after sync with explicit `--profile-mode original` and `--profile-mode command-only`: `docs/research/stage3_profile_original_20260619.*` and `docs/research/stage3_profile_command_only_20260619.*`.
-- Fresh profiler per-call findings: original mode collected `630` transitions in `13.239s`; command-only mode collected `1171` transitions in `18.967s`, so total time is not directly comparable. Per-call costs show command-only `env.step` averaged `9.292 ms` vs original `10.341 ms`, `ParkingAgent.get_action` averaged `3.275 ms` vs `3.567 ms`, and `SACAgent.update` averaged `45.366 ms` vs `58.146 ms` in this bounded diagnostic.
-- Fresh profiler bottleneck conclusion: `env.step` remains the dominant measured component (`62-67%` of measured component wall), followed by `ParkingAgent.get_action` (`21-24%`). The next safe research step should decompose `env.step` into render/image/lidar/action-mask/Reeds-Shepp/status-check subcomponents before proposing optimization code.
-- Detailed env-step traces were written to `docs/research/stage3_env_step_detail_command_only_20260619.json` and `docs/research/stage3_env_step_detail_original_20260619.json`, with the main analysis in `docs/research/2026-06-19-stage3-env-step-internal-profile.md`.
-- Detailed env-step per-call timing: command-only raw step `9.635 ms`, render total `6.621 ms`, image draw/capture/process `3.890 ms`, action mask `1.779 ms`, lidar `0.651 ms`, RS find path normalized `1.323 ms`, and display/update residual about `0.275 ms`.
-- First safe optimization point selected: an opt-in exact-output fast path for `ActionMask.get_steps`, replacing the temporary `step_save` allocation/assignment with a boolean validity expression and `np.all` handling. A no-source-change micro-probe showed exact output parity on sampled inputs and about `1.93x` isolated action-mask speedup.
-- Do not optimize the RGB image pipeline first despite its larger cost; it is higher-risk because exact pixel-observation semantics are harder to preserve. Do not prioritize display-update/frame-cap bypass first because the measured residual is small.
-- Gate hard rejection is driven by TensorBoard `hard_reject_has_nonfinite`, so any non-finite hard-reject scalar blocks candidate acceptance before speed or quality follow-up.
-- The Task 9 candidate report template now lives at `docs/research/stage3_20k_candidate_report_template.md` and keeps `src/train`, `src/env`, and `src/model` diff checks explicit in every candidate report.
-- 2026-06-19 deep speed research was written to `docs/research/2026-06-19-stage3-safe-speed-deep-research.md`.
-- HOPE paper/code invariants that must be preserved during Stage 3 speed work: action-mask semantics, Normal/Complex/Extrem/DLP scene scheduling, DLP case scheduling, hybrid RL plus Reeds-Shepp switching, observation semantics (`img`, `lidar`, `target`, `action_mask`), action/reward/terminal semantics, and scene-specific evaluation KPIs.
-- The HOPE paper treats action masking, RS hybridization, difficulty-ranked scenarios, and four input modalities as method-level design choices. Optimizations that remove or weaken any of these are not safe acceleration; they create a different training experiment.
-- Local code aligns with the paper invariants: `train_HOPE_sac.py` drives adaptive scene selection, `parking_agent.py` switches between RL and RS planner actions, `car_parking_base.py` constructs image/lidar/target/action-mask observations every step, and `sac_agent.py` applies the action mask during action post-processing.
-- Tuning or scaling training parameters is allowed by boundary, but it is not automatically a safe engineering optimization. Batch size, replay size, update cadence, mini epochs, learning rates, model capacity, and parallel collection should be treated as controlled training-methodology experiments with matched quality gates.
-- Current evidence still supports an environment/pipeline bottleneck model rather than a pure GPU-update bottleneck: the strong 36.5K baseline averaged only `25.76%` whole-GPU utilization, and micro-profile costs were led by `env.step_total`, render/observation work, RS probing, action selection, and action-mask calculation.
-- Recommended next implementation, if approved later, is a measurement pack outside original source paths: profile `env.reset`, `env.step`, render/image/lidar/action-mask/RS, `get_action`, replay sampling, SAC update, TensorBoard logging, checkpointing, and eval overhead before optimizing hot paths.
-- Safe acceleration order from the deep research: keep command-only run mode as the validated low-risk baseline candidate; broaden parity checks; add measurement tooling; then test one semantics-preserving environment micro-optimization; only after that run controlled batch/update sweeps.
-- The command-only run was originally launched as a continuous 0-100K run with external gates. On 2026-06-19 the user superseded that plan: stop around 20K episodes as a smoke run, then evaluate whether the command-only flags caused negative training-quality impact before starting new speed research.
-- The command-only 20K smoke was stopped at `20038` TensorBoard episodes after `SAC_19999.pt` was written. The training workload, launcher, and resource monitor PIDs were terminated externally after the checkpoint was preserved.
-- Final command-only 20K throughput was `1545.71` episodes/hour and `39.10` environment steps/second across `12.964` hours, with average process CPU `37.76%` and average whole-GPU utilization `29.42%`.
-- Matched 200-episode external eval showed exact parity between command-only `SAC_19999.pt` and baseline `SAC_19999.pt`: Normal `0.985`, Complex `0.945`, Extrem `0.655`, DLP `0.960`, mean `0.88625`.
-- This parity means `--visualize= --verbose=` did not show a negative training-quality impact at the 20K smoke point.
-- Compared with the stopped 36.5K baseline eval, the command-only 20K checkpoint is weaker on Extrem (`0.655` vs `0.915`) and mean success (`0.88625` vs `0.96375`), but this is an expected 20K maturity caveat rather than a command-only regression because the matched 20K baseline eval is identical.
-- TensorBoard at the command-only stop point was broadly comparable to the 20K baseline reference: latest Normal `1.00`, Complex `0.94`, Extrem `0.69`, DLP `0.82`, avg reward `0.0768`, finite actor/critic losses, and latest `step_num=52`.
-- Future early-warning monitoring should keep Extrem as the most sensitive lagging scene and should interpret `step_num=200` timeout recurrence together with reward and scene success, not as a standalone failure.
-- Baseline gate references were exported to `docs/research/stage3_baseline_gate_references_20260619.json` and `.md` using full TensorBoard scalar loading with `size_guidance={"scalars": 0}`.
-- The 20K baseline TensorBoard reference has latest scene rates Normal `1.00`, Complex `0.94`, Extrem `0.73`, DLP `0.78`, latest avg reward `0.0648`, and last-500 `step_num` mean `67.2`; this is an early-warning comparison point, not a final equivalence gate.
-- The 36.5K baseline TensorBoard reference has latest scene rates Normal `0.99`, Complex `1.00`, Extrem `0.94`, DLP `0.90`, latest avg reward `0.1492`, and last-500 `step_num` mean `43.14`.
-- The 36.5K matched external eval reference remains the stopped baseline `SAC_35999.pt` with 200 episodes per scene: Normal `1.000`, Complex `0.985`, Extrem `0.915`, DLP `0.955`, mean `0.96375`.
-- Working 36.5K equivalence rule: command-only mean success within `0.05` absolute of baseline, no individual scene worse by more than `0.10`, Normal/Complex at least `0.95`, and Extrem/DLP at least `0.85`.
-- The command-only 0-100K run started at `2026-06-19T00:43:15+08:00` with run dir `D:\Github\HOPE\src\log\exp\sac_20260619_004316`, workload PID `11136`, and resource monitor PID `14536`.
-- Heartbeat automation `hope-command-only-100k-gated-monitor` was updated into a 15-minute one-time 20K smoke stop hook. After it stops, evaluates, documents, and reports the run, it should delete itself.
-- At the 2026-06-19 07:15 snapshot, the command-only long run had reached `10,903` episodes and `1,133,044` environment steps in `6.811` hours: `1600.86` episodes/hour and `46.21` environment steps/second. Compared with the stopped 36.5K baseline average of about `1531.12` episodes/hour and `32.1` environment steps/second, this is a modest `1.046x` episode-throughput gain but a clearer `1.44x` environment-step throughput gain. Episode/hour comparison is conservative because the current run is still in earlier, longer-episode training while the 36.5K baseline includes later shorter learned-policy episodes.
-- The user-approved command-only 1000-episode smoke completed on 2026-06-19 local time with the original `train_HOPE_sac.py` unchanged and command arguments `--train_episode 1000 --eval_episode 1 --visualize= --verbose=`.
-- The command-only smoke reached 1,000 episodes and 127,470 environment steps in 2,261.16 seconds to the last TensorBoard training scalar: `1592.10` episodes/hour and `56.37` environment steps/second.
-- Workload resource sampling for the command-only smoke used the real child Python PID after detecting that the initial Windows venv launcher PID was idle. The valid workload CSV has 442 samples, average normalized CPU `44.74%`, peak CPU `48.91%`, average whole-GPU utilization `36.75%`, peak whole-GPU utilization `78%`, and peak whole-GPU memory `3519 MB`.
-- The original baseline's first 1,000 TensorBoard episodes took 7,833.25 seconds from launch to the 1000th scalar: `459.58` episodes/hour and `14.99` environment steps/second. Against this fair early-phase comparison, the command-only smoke is `3.46x` faster by episodes/hour and `3.76x` faster by environment steps/second.
-- The command-only smoke TensorBoard scalars were finite: total reward trend improved by about `+2.04`, critic loss trend decreased by about `-0.197`, and alpha moved from `0.0100` to `0.00943`. `success_rate_Extrem` stayed below `0.2`, which is expected in a 1K early-training smoke and is not a long-run quality conclusion.
-- The command-only smoke validates `--verbose= --visualize=` as the next low-risk long-run speed candidate, but it does not prove 35K/40K training-quality equivalence.
-- User-directed baseline stop: the original SAC run was stopped at `36502` episodes after `23.84` hours, and this supersedes the earlier 40K continuation target for this run only.
-- Final 36.5K TensorBoard summary: `env_step_count=2753956`, estimated SAC updates after warmup `274371`, finite actor/critic losses, latest moving success rates Normal `0.99`, Complex `1.00`, Extrem `0.94`, DLP `0.90`, and latest `step_num=36`.
-- Final 36.5K resource profile: 16,963 samples, average normalized process CPU `32.38%`, peak CPU `49.09%`, average whole-GPU utilization `25.76%`, peak whole-GPU utilization `97%`, and peak whole-GPU memory `3740 MB` on Ryzen 7 9700X plus RTX 4080 SUPER.
-- Six-hour resource windows show utilization falling as the policy improves: average CPU/GPU went from `44.49%`/`31.26%` in the first six hours to `20.56%`/`19.26%` in the final window.
-- Final 200-episode evaluation of `SAC_35999.pt` produced strong held-out scene rates: Normal `1.00`, Complex `0.985`, Extrem `0.915`, DLP `0.955`.
-- No checkpoint exists exactly at episode 36,502 because the run was stopped externally; use `SAC_35999.pt` for last-checkpoint evaluation and `SAC_best.pt` for best-record comparison.
-- A 500-step no-source-change micro-profile ranked costs as: `env.step_total` 9.75 ms/call, `env.render_total` 6.19 ms/call, `env.rs_probe` 3.42 ms/call when invoked, `agent.get_action` 3.20 ms/call, `env.action_mask` 1.68 ms/call, and `agent.update` 38.86 ms/update.
-- Render-mode parity check found exact matches between `render_mode=None` and `render_mode='rgb_array'` under SDL dummy for scripted Normal, Complex, Extrem, and DLP cases: max differences were `0.0` for `img`, `lidar`, `target`, `action_mask`, rewards, and statuses.
-- Acceleration priority is therefore: remove CLI/logging/display overhead first, add external profiling, then consider opt-in environment micro-optimizations with parity tests; do not chase CPU/GPU saturation as a goal.
-- Next speed research boundary: do not remove or weaken action masks, do not flatten or replace the curriculum/scene scheduling, do not change reward semantics or environment dynamics, and do not use OGM-specific design changes in Stage 3. Focus on training-methodology and engineering-architecture improvements that can be isolated and validated.
-- 2026-06-18 safe-acceleration study: latest live original SAC baseline summary at about 28,525 episodes reports `training_budget_met=false`, `env_step_count=2326377`, positive reward trends, finite actor/critic losses, and recent success rates Normal `0.99`, Complex `0.98`, Extrem `0.91`, DLP `0.75`.
-- The same live run's current `best.txt` records `epoch: 26209, success rate: 0.99 0.98 0.9 0.94`, so the original HOPE path is already producing strong Stage 3 quality signals before 40,000 episodes are complete.
-- Resource CSV through 2026-06-18 16:32 contains 12,012 samples from the training process with average normalized process CPU about `37.14%`, peak `49.09%`, average whole-GPU utilization about `28.0%`, peak `97%`, and peak whole-GPU memory about `3740 MB`; GPU figures remain whole-device coarse samples.
-- `train_HOPE_sac.py` warms up with random actions until `total_step_num > memory_size`, then performs one SAC update every 10 environment steps, logging actor/critic loss every 200 steps.
-- SAC defaults in `SACConfig` override the global `BATCH_SIZE`: although current copied `configs.txt` has `BATCH_SIZE = 8192`, the live SAC agent uses `batch_size = 32` unless `batch_size` is explicitly passed through the agent config.
-- The original environment step path performs vehicle simulation, collision/status checks, hidden Pygame rendering, image processing, lidar simulation, action-mask calculation, and near-goal Reeds-Shepp probing; these are the main likely wall-clock bottlenecks to profile before any optimization.
-- The old 2026-04 run `sac_20260418_165251` is not a clean original-HOPE baseline: its copied config includes BEV/ULS-related fields, larger image conv layers `C_CONV = [16, 32, 64]`, larger image FC layers `SIZE_FC = [512, 256]`, action mask/action chunk profiles, and other postprocess diagnostics.
-- That old 40K run completed but its own summaries report best fixed deterministic mean only `0.2625`, selected sample eval `0.49`, selected mean eval `0.215`, DLP mean `0.2`, Extrem mean `0.06`, sample-mean gap `0.275`, repeated reward/success decoupling, critic spikes, and deterministic-control/generalization bottlenecks.
-- Safe acceleration should therefore preserve original observation/action/reward/model semantics first; large model-capacity or batch-size changes are high-risk because the historical failed run mixed these with other distribution-changing changes and underperformed the current original baseline by a wide margin.
-- Near-30K judgment: current evidence is sufficient for preliminary resource/bottleneck direction because CPU and whole-GPU utilization have remained low and stable over more than 11,000 resource samples, but it is not sufficient to replace the requested 40,000-episode baseline for final training-quality or reproduction conclusions.
-- The 2026-06-18 18:13 heartbeat crossed 30,000 episodes: 30,520 episodes, 2,445,989 environment steps, estimated 243,574 SAC updates after warmup, average process CPU `35.80%`, average whole-GPU utilization `27.63%`, latest success rates Normal `1.00`, Complex `0.98`, Extrem `0.84`, DLP `0.75`, and finite actor/critic losses. This strengthens the preliminary low-utilization conclusion while leaving final baseline closure gated on 40,000 episodes.
-- The 2026-06-18 18:43 heartbeat reached 31,070 episodes with average process CPU `35.46%`, average whole-GPU utilization `27.38%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `0.99`, Extrem `0.92`, DLP `0.79`, and latest `step_num=50`; no new TensorBoard failure pattern emerged, but final closure remains gated on 40,000 episodes.
-- The 2026-06-18 19:13 heartbeat reached 31,654 episodes with average process CPU `35.09%`, average whole-GPU utilization `27.05%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `1.00`, Extrem `0.91`, DLP `0.85`, and latest `step_num=24`; this continues the low-utilization but healthy-learning pattern before 40,000 episodes.
-- The 2026-06-18 19:43 heartbeat reached 32,249 episodes with average process CPU `34.75%`, average whole-GPU utilization `26.75%`, finite actor/critic losses, latest success rates Normal `1.00`, Complex `0.97`, Extrem `0.90`, DLP `0.89`, and latest `step_num=23`; no new TensorBoard failure pattern emerged.
-- The 2026-06-18 20:13 heartbeat reached 32,750 episodes with average process CPU `34.39%`, average whole-GPU utilization `26.49%`, finite actor/critic losses, latest success rates Normal `0.98`, Complex `0.98`, Extrem `0.89`, DLP `0.80`, and latest `step_num=11`; no new TensorBoard failure pattern emerged.
-- The 2026-06-18 20:43 heartbeat reached 33,291 episodes with average process CPU `34.05%`, average whole-GPU utilization `26.20%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `1.00`, Extrem `0.89`, DLP `0.84`, and latest `step_num=29`; the healthy-learning but low-utilization pattern continues.
-- The 2026-06-18 21:13 heartbeat reached 33,826 episodes with average process CPU `33.72%`, average whole-GPU utilization `25.96%`, finite actor/critic losses, latest success rates Normal `1.00`, Complex `0.99`, Extrem `0.86`, DLP `0.83`, and latest `step_num=23`; no new TensorBoard failure pattern emerged.
-- The 2026-06-18 21:43 heartbeat reached 34,489 episodes with average process CPU `33.41%`, average whole-GPU utilization `25.78%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `0.98`, Extrem `0.93`, DLP `0.89`, and latest `step_num=39`; no new TensorBoard failure pattern emerged.
-- The 2026-06-18 22:13 heartbeat reached 35,111 episodes with average process CPU `33.12%`, average whole-GPU utilization `25.80%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `0.99`, Extrem `0.90`, DLP `0.85`, and latest `step_num=8`; no new TensorBoard failure pattern emerged.
-- The 2026-06-18 22:43 heartbeat reached 35,595 episodes with average process CPU `32.81%`, average whole-GPU utilization `25.82%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `0.98`, Extrem `0.90`, DLP `0.83`, and latest `step_num=200`; this timeout recurrence is worth continuing to monitor, but reward/success trends remain healthy and do not indicate a new failure mode yet.
-- The 2026-06-18 23:13 heartbeat reached 36,206 episodes with average process CPU `32.53%`, average whole-GPU utilization `25.83%`, finite actor/critic losses, latest success rates Normal `0.99`, Complex `1.00`, Extrem `0.94`, DLP `0.92`, and latest `step_num=15`; the timeout warning did not recur, and the healthy-learning but low-utilization pattern continues.
-- No prior root-level `task_plan.md`, `findings.md`, or `progress.md` existed before this stage.
-- `planning-with-files` session catchup produced no unsynced context output.
-- The original README recommends a Conda environment with Python 3.8, then `pip install -r requirements.txt`, plus separate PyTorch installation.
-- Windows Python launcher reports only Python 3.14 and 3.13: no local Python 3.8 is available through `py -0p`.
-- `python --version` resolves to Python 3.14.5, which is likely too new for some ML packages and PyTorch wheels.
-- `conda` was not found on PATH.
-- `nvidia-smi` reports an NVIDIA GeForce RTX 4080-class GPU with CUDA UMD 13.3 support.
-- `.gitignore` does not currently ignore `.venv/`.
-- `requirements.txt` is unpinned and includes: `numpy`, `shapely`, `pygame`, `gym`, `heapdict`, `opencv-python`, `scipy`, `tensorboard`, `tqdm`, `matplotlib`, `einops`.
-- `uv` was not available on PATH.
-- `.venv` was created with Python 3.13 because Python 3.8 is not available locally and Python 3.14 is likely too new for this ML stack.
-- Base packaging tools were upgraded inside `.venv`: `pip 26.1.2`, `setuptools 82.0.1`, `wheel 0.47.0`, `packaging 26.2`.
-- `requirements.txt` installed successfully in `.venv`; notable resolved versions include `gym 0.26.2`, `numpy 2.4.6`, `pygame 2.6.1`, `shapely 2.1.2`, `opencv-python 4.13.0.92`, `scipy 1.17.1`, and `tensorboard 2.20.0`.
-- PyTorch official install documentation says Windows PyTorch currently supports Python 3.10-3.14 and provides CUDA install options including CUDA 12.8.
-- PyTorch installed successfully in `.venv` with `torch 2.11.0+cu128` from the official CUDA 12.8 wheel index.
-- During PyTorch installation, `setuptools` inside `.venv` was changed from `82.0.1` to `70.2.0` due to PyTorch's dependency constraint `setuptools<82`.
-- `pip check` reports `No broken requirements found`.
-- Key dependency imports succeeded from `D:\Github\HOPE\.venv\Scripts\python.exe`.
-- PyTorch CUDA verification succeeded: `torch.cuda.is_available()` is `True`, `torch.version.cuda` is `12.8`, and device is `NVIDIA GeForce RTX 4080 SUPER`.
-- Original HOPE environment reset succeeded with observation keys `action_mask`, `img`, `lidar`, and `target`; shapes were `(42,)`, `(3, 64, 64)`, `(120,)`, and `(5,)`.
-- `gym 0.26.2` prints an unmaintained/Gymnasium migration warning under NumPy 2.4.6, but this did not block import or reset.
-- `gym.spaces.Box` prints a float precision warning during environment construction, but this did not block reset.
-- `git diff -- src` is empty after Stage 1.
-- `.venv\pyvenv.cfg` is ignored by `.gitignore:12`.
-- Stage 2 checkpoint inventory: `HOPE_SAC0.pt` (40,666,937 bytes), `HOPE_SAC1.pt` (34,345,666 bytes), `HOPE_PPO.pt` (21,008,837 bytes), and `autoencoder.pt` (4,626,623 bytes).
-- `eval_mix_scene.py` selects `PPOAgent` when the checkpoint path contains `ppo`, otherwise it selects `SACAgent`.
-- `HOPE_SAC0.pt` evaluation completed with `eval_episode 10` after setting `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1`.
-- `HOPE_SAC0.pt` short validation wrote results under `src/log/eval/20260617_221106/`.
-- `HOPE_SAC0.pt` short validation success rates were all `1.0` for `extreme`, `dlp`, `complex`, and `normalize` result files.
-- `HOPE_SAC1.pt` quick validation completed with `eval_episode 3`; result directory `src/log/eval/20260617_221207/`; success rates were all `1.0` across the four evaluation segments.
-- `HOPE_PPO.pt` quick validation completed with `eval_episode 3`; result directory `src/log/eval/20260617_221220/`; success rates were all `1.0` across the four evaluation segments.
-- `autoencoder.pt` was not evaluated as a policy checkpoint.
-- `parking_map_dlp.py` prints a Shapely compatibility warning when unpickling `data/dlp.data`; it did not block evaluation.
-- Stage 2 generated evaluation logs under `src/log/eval/`; these are ignored by `.gitignore`.
-- `git diff -- src` remains empty after Stage 2.
-- The user clarified that the Stage 3 40K requirement refers to training episodes, aligned with the original author's `--train_episode 100000` scale, not to the sum of environment interaction steps.
-- TensorBoard `step_num` sums should remain a secondary metric for throughput, SAC-update estimates, and training-health interpretation.
-- Stage 3 TensorBoard signals already emitted by `train_HOPE_sac.py` include `total_reward`, `avg_reward`, `actor_loss`, `critic_loss`, `action_std0`, `action_std1`, `alpha`, scene success rates, and `step_num`.
-- Stage 3 resource bottleneck candidates include environment stepping, Pygame rendering, Shapely collision checks, action mask calculation, replay-memory sampling, PyTorch update work, TensorBoard logging, and evaluation overhead.
-- Stage 3 executable plan was created at `docs/superpowers/plans/2026-06-17-hope-stage3-training-resource-study.md`.
-- The Stage 3 plan keeps the baseline on the unmodified `src/train/train_HOPE_sac.py` path and restricts performance/resource work to external monitoring, wrappers, or new opt-in experiment entry points unless the user explicitly approves a separate source-change plan.
-- A 300-episode Stage 3 diagnostic dry run started successfully, reached 300 episodes, and wrote TensorBoard data under `src/log/exp/sac_20260617_230340/`, but it is not a baseline quality result because it is far below the clarified 40,000-episode budget.
-- The 300-episode diagnostic exposed a launcher-PID versus child-Python-PID monitoring issue; future long runs should monitor the child workload process when present.
-- `tools/stage3/tensorboard_stage3_summary.py` now treats `episode_count` as the budget field and `env_step_count` as observational.
-- The 40,000-episode baseline run started at stamp `20260617_233810`, with TensorBoard run directory `src/log/exp/sac_20260617_233812/`, monitored child PID `22224`, monitor PID `25356`, and metadata file `src/log/exp/stage3_baseline_40k_20260617_233810.meta.json`.
-- The baseline run metadata now records the locked TensorBoard run directory and labels GPU metrics as whole-device `nvidia-smi` samples, not PID-level attribution.
-- A live TensorBoard snapshot at about 103 episodes reported `training_budget_met=false`, `env_step_count=12193`, and estimated SAC updates after warmup `195`; this is progress monitoring only, not a completed baseline.
-- Heartbeat monitoring at 2026-06-18 00:43 showed the 40,000-episode baseline still running at 1,812 episodes with finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, and no `src/` diff.
-- Heartbeat monitoring at 2026-06-18 01:13 showed the run still active at 2,681 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, and one `step_num=200` timeout warning sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 01:43 showed the run still active at 3,566 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, and latest scene success rates Normal `0.85`, Complex `0.77`, Extrem `0.47`, DLP `0.67`.
-- Heartbeat monitoring at 2026-06-18 02:13 showed the run still active at 4,438 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, and latest scene success rates Normal `0.84`, Complex `0.79`, Extrem `0.35`, DLP `0.66`.
-- Heartbeat monitoring at 2026-06-18 02:43 showed the run still active at 5,373 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.89`, Complex `0.83`, Extrem `0.36`, DLP `0.64`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 03:13 showed the run still active at 6,174 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.92`, Complex `0.76`, Extrem `0.43`, DLP `0.66`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 03:43 showed the run still active at 7,083 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.92`, Complex `0.85`, Extrem `0.47`, DLP `0.74`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 04:13 showed the run still active at 7,947 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.93`, Complex `0.78`, Extrem `0.57`, DLP `0.62`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 04:43 showed the run still active at 8,826 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.94`, Complex `0.85`, Extrem `0.46`, DLP `0.70`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 05:13 showed the run still active at 9,687 episodes, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.97`, Complex `0.84`, Extrem `0.51`, DLP `0.73`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- The Stage 3 resource monitor can exit independently of training; on 2026-06-18 05:13 the training process remained active but monitor PID `25356` was gone. The monitor script now preserves existing CSV contents and appends on restart, and resource monitoring resumed as PID `34596`.
-- Heartbeat monitoring at 2026-06-18 05:43 showed the run still active at 10,532 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.90`, Complex `0.84`, Extrem `0.38`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 06:13 showed the run still active at 11,382 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.95`, Complex `0.89`, Extrem `0.57`, DLP `0.73`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 06:43 showed the run still active at 12,361 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.94`, Complex `0.91`, Extrem `0.59`, DLP `0.83`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 07:13 showed the run still active at 13,217 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.92`, Complex `0.88`, Extrem `0.57`, DLP `0.79`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 07:43 showed the run still active at 14,112 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.99`, Complex `0.86`, Extrem `0.68`, DLP `0.85`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 08:13 showed the run still active at 15,053 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.93`, Complex `0.88`, Extrem `0.70`, DLP `0.91`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 08:43 showed the run still active at 15,903 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.94`, Complex `0.92`, Extrem `0.59`, DLP `0.87`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 09:13 showed the run still active at 16,772 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.93`, Complex `0.93`, Extrem `0.74`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 09:43 showed the run still active at 17,701 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 31%, latest scene success rates Normal `0.98`, Complex `0.92`, Extrem `0.70`, DLP `0.85`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 10:13 showed the run still active at 18,587 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 30%, latest scene success rates Normal `0.99`, Complex `0.92`, Extrem `0.70`, DLP `0.89`, and no repeated latest-step timeout warning at this snapshot.
-- The Stage 3 resource monitor exited a second time after the 2026-06-18 10:13 snapshot while training continued. Monitoring resumed as PID `19512`, the metadata was updated, and CSV appending was verified at 7,537 samples.
-- Heartbeat monitoring at 2026-06-18 10:43 showed the run still active at 19,469 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 30%, latest scene success rates Normal `1.00`, Complex `0.95`, Extrem `0.79`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 11:13 showed the run still active at 20,260 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 30%, latest scene success rates Normal `1.00`, Complex `0.91`, Extrem `0.75`, DLP `0.84`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 11:43 showed the run still active at 21,126 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 30%, latest scene success rates Normal `1.00`, Complex `0.94`, Extrem `0.75`, DLP `0.87`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 12:13 showed the run still active at 22,035 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 29%, latest scene success rates Normal `1.00`, Complex `0.96`, Extrem `0.75`, DLP `0.86`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 12:43 showed the run still active at 22,851 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 29%, latest scene success rates Normal `0.99`, Complex `0.97`, Extrem `0.81`, DLP `0.87`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 13:13 showed the run still active at 23,634 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 29%, latest scene success rates Normal `0.99`, Complex `0.94`, Extrem `0.79`, DLP `0.82`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 13:43 showed the run still active at 24,478 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 29%, latest scene success rates Normal `0.99`, Complex `0.98`, Extrem `0.83`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 14:13 showed the run still active at 25,219 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `1.00`, Complex `0.98`, Extrem `0.81`, DLP `0.89`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 14:43 showed the run still active at 26,042 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.98`, Complex `0.98`, Extrem `0.84`, DLP `0.87`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 15:13 showed the run still active at 26,803 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.99`, Complex `0.97`, Extrem `0.92`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 15:43 showed the run still active at 27,466 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.97`, Complex `0.99`, Extrem `0.85`, DLP `0.89`, and a recurring latest `step_num=200` timeout sample to keep watching.
-- Heartbeat monitoring at 2026-06-18 16:13 showed the run still active at 28,154 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.99`, Complex `0.98`, Extrem `0.92`, DLP `0.80`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 16:43 showed the run still active at 28,767 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.99`, Complex `0.99`, Extrem `0.91`, DLP `0.76`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 17:13 showed the run still active at 29,368 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `1.00`, Complex `0.96`, Extrem `0.89`, DLP `0.81`, and no repeated latest-step timeout warning at this snapshot.
-- Heartbeat monitoring at 2026-06-18 17:43 showed the run still active at 29,941 episodes with the restarted monitor running, finite TensorBoard actor/critic losses, positive reward trend deltas, average whole-GPU utilization around 28%, latest scene success rates Normal `0.97`, Complex `0.97`, Extrem `0.83`, DLP `0.79`, and no repeated latest-step timeout warning at this snapshot.
+- `raw_paper/2026-06-30-human-like-parking-trajectory-shape-research/production_requirement.md`
 
-## Technical Decisions
+Implementation plan:
 
-| Decision | Rationale |
-|----------|-----------|
-| Prefer `.venv` in the repository root for Stage 1 | It gives the project an isolated environment and is easy to invoke explicitly from PowerShell. |
-| Defer checkpoint execution to Stage 2 | The current user request is Stage 1 environment setup; checkpoint validation is explicitly the next stage. |
-| Do not use system Python 3.14 for the HOPE environment if an alternative is available | The project targets an older ML stack; Python 3.14 is likely to create dependency and PyTorch compatibility issues. |
-| Create `.venv` with `py -3.13 -m venv .venv` | This is the best local isolated option available without installing global tools. |
-| Track `.venv/` in `.gitignore` | Avoids accidental Git staging of local environment artifacts. |
-| Install PyTorch CUDA 12.8 wheel into `.venv` | The local NVIDIA driver reports CUDA UMD 13.3, and PyTorch's Windows install page offers CUDA 12.8 wheels for supported Python versions. |
-| Keep Gym warning as a documented warning, not a migration task | Stages 1-3 are about validating and reproducing original HOPE; migrating Gym would alter the original code path. |
-| Use `HOPE_SAC0.pt` as first Stage 2 checkpoint | This is the checkpoint specified by `AGENTS.md` for smoke validation. |
-| Run SAC1 and PPO with `eval_episode 3` after SAC0 | Confirms the remaining policy checkpoints load without treating tiny sample results as paper reproduction metrics. |
-| Do not interpret Stage 2 success rates as paper reproduction | Episode counts were intentionally small; Stage 2 validates runtime/checkpoint health only. |
-| Stage 3 optimization requires baseline evidence first | The user explicitly requested resource-utilization research and bottleneck identification before acceleration changes. |
-| Use 40,000 training episodes as the minimum meaningful Stage 3 smoke/validation budget | The user clarified this is about 40% of the original author's 100,000-episode training budget, and warned that too few RL episodes lack diagnostic signal. |
-| Track TensorBoard as a primary training-health source | The user asked for continuous monitoring and failure-mode summaries based on TensorBoard indicators. |
-| Convert Stage 3 into an executable plan before running training | The next work includes long-running local training and monitoring; a task-by-task plan reduces risk of drifting into unsupported optimization or OGM work. |
-| Treat the 300-episode run as diagnostic only | The user clarified that 40K refers to the original training scale, so the short run only validates command and monitoring plumbing. |
-| Lock Stage 3 TensorBoard summaries to the run directory in metadata | Avoids summarizing the wrong `sac_*` directory when old runs are touched or multiple runs exist. |
-| Use 20K as the next safe-speed validation budget | Future speed experiments compare against the command-only 20K baseline `src/log/exp/sac_20260619_004316` and checkpoint `SAC_19999.pt`. |
-| Convert safe-speed PRD scope B into an implementation plan | The accepted scope is measurement tooling, parity checks, a 20K gated workflow, and candidate admission rules; the executable plan is `docs/superpowers/plans/2026-06-19-hope-stage3-safe-speed-20k-framework.md`. |
-| Keep safe-speed framework changes outside protected HOPE source paths | The plan adds opt-in tools under `tools/stage3/` and reports/planning docs, while preserving `src/train`, `src/env`, and `src/model`. |
-| Use `hard_reject_has_nonfinite` as the safe-speed 20K hard-reject gate | Candidate reports and comparisons should reject runs with non-finite hard-reject TensorBoard metrics before considering speed follow-up eligibility. |
-| First approved safe source optimization is default-off fast action mask | The user approved continuing after env-step profiling identified `ActionMask.get_steps` as the safest hot-path target. The implementation keeps `ActionMask()` defaulting to the original path and enables the new branch only through `fast_get_steps=True` or profiler `--action-mask-mode fast`. |
-| Fast action mask passes exact-output unit parity | `tools/stage3/tests/test_fast_action_mask.py` compares edge lidar samples and 32 seeded random lidar samples; `ActionMask(fast_get_steps=True).get_steps(...)` exactly equals the original output in all checked cases. |
-| Bounded profile shows fast action mask lowers env-step cost | In command-only env-step diagnostics, action-mask average cost changed from `1.694 ms` to `0.821 ms`, and `env.step` average changed from `9.345 ms` to `8.205 ms`. This is measurement-only evidence for 20K candidate admission, not a quality result. |
-| Fast action mask needs an explicit training entry point | The optimized `ActionMask` branch is default-off by design, so a direct call to `src/train/train_HOPE_sac.py` would not test the optimization. The 20K candidate must use the opt-in wrapper `tools/stage3/train_HOPE_sac_fast_action_mask.py` via `launch_stage3_20k.ps1 -FastActionMask`. |
-| Fast candidate resource CSV has startup parent-PID rows | The Windows venv launcher PID `29844` spawned actual training child PID `3696`. Resource monitoring was restarted against PID `3696`; the initial parent-PID rows in `stage3_fast_action_mask_20k_20260620_085206.resources.csv` should be caveated or excluded when interpreting process CPU/RAM, while whole-GPU samples remain coarse device-level values. |
-| Promote fast action mask from admitted candidate to passed 20K speed candidate | The 20K run improved checkpoint-time throughput by more than the `10%` gate while preserving matched 20K external eval quality. The change remains opt-in and default-off, and a longer 36.5K/100K run would still be needed before making stronger reproduction-equivalence claims. |
-| Use accepted fast action-mask 20K as the Stage 3 milestone baseline | The user explicitly confirmed the speedup and quality result. Future Stage 4 PRD work should reference this as the current local HOPE baseline while separately defining OGM-paper reproduction targets. |
-| OGM PRD must be metric-driven from the start | Because the user set a `+-3%` target against OGM paper final values and `100K +-20%` training range, the PRD must define exact KPI names, data sources, acceptance windows, and what happens if the paper does not expose enough detail for one metric. |
-| OGM PRD route is Proxy OGM First | User selected方案 1. This avoids blocking on unavailable real-world OGM data while still implementing the OGM paper's perception contribution as an explicit HOPE modality and keeping acceptance tied to simulation KPIs. |
-| Written PRD review is the next gate | `docs/superpowers/specs/2026-06-20-hope-rl-ogm-proxy-prd.md` must be reviewed by the user before invoking `superpowers:writing-plans` or touching OGM implementation code. |
-| Writing plan completed for Stage 4 OGM Proxy | `docs/superpowers/plans/2026-06-20-hope-rl-ogm-proxy-integration.md` is ready for execution mode selection. |
+- `docs/superpowers/plans/2026-06-30-trajectory-style-evaluation-toolkit.md`
 
-## Issues Encountered
+Historical planning archive:
 
-| Issue | Resolution |
-|-------|------------|
-| Verification command used `w.reset(level='Normal')`, but `CarParkingWrapper.reset()` only accepts positional arguments. | Use `w.reset(None, None, 'Normal')`, matching how training scripts call `env.reset(case_id, None, scene_chosen)`. |
-| `HOPE_SAC0.pt` failed to load under PyTorch 2.11 default `weights_only=True`; error reported unsupported global `model.agent.sac_agent.SACConfig`. | Treat the repository checkpoint as trusted and rerun the command with `TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1` to preserve the original source code path. |
-| Stage 3 resource monitor exited while training continued. | Made the external monitor append-safe and restarted it against the same CSV without touching original HOPE training, environment, or model source. |
-| `tensorboard_stage3_summary.py` was mistakenly called with `--run-dir`, and the resource CSV was initially read with a non-existent `cpu_percent_normalized` field. | Use the script's positional `log_dir` argument and read the monitor CSV's `cpu_percent` column for CPU summaries. |
-| `stop_stage3_at_20k.ps1` rejected the fast candidate child PID after checkpoint creation because PowerShell `ConvertFrom-Json` date conversion shifted UTC/local semantics in the process-window safety check. | Used an equivalent manual fallback guard based on PID, process name, command-line fragments, and checkpoint/episode presence. The workload and resource monitor had already exited naturally, so no logs or checkpoints were lost. |
+- `docs/planning_archive/2026-06-30-pre-trajectory-style-prd/`
 
-## Resources
+## Research Conclusions
 
-- `AGENTS.md`
-- `readme.md`
-- `requirements.txt`
-- `task_plan.md`
-- `progress.md`
+- Current HOPE+OGM checkpoints can succeed in selected DLP parking cases while producing trajectories that do not match common human parking style.
+- The visible problem is not only success/failure. It is route shape: slot-mouth entry, clearance bias, planned cusp placement, curvature shape, and RL/RS handoff behavior.
+- No complete open-source tool was found that directly provides both:
+  - a HOPE-trace-aware offline trajectory style evaluator;
+  - a scene-conditioned human reference trajectory family generator.
+- ParkingE2E is useful for trajectory metrics such as L2, Hausdorff, and Fourier descriptor differences, but it is not a drop-in HOPE style evaluator.
+- Human-like parking papers support route-family and behavior-feature approaches instead of optimizing only shortest feasible paths.
+- Generic trajectory-distance libraries and parking planners are useful components, but the HOPE-specific trace schema, scene classification, and diagnosis layer need to be built locally.
 
-## Visual/Browser Findings
+## P0 Scope Decisions
 
-- No browser or image findings in this stage so far.
+P0 includes:
 
-## OGM Integration Research Refresh - 2026-06-20
+- Perpendicular parking:
+  - `perpendicular_enough_space`;
+  - `perpendicular_limited_space`.
+- Parallel parking:
+  - `parallel_standard`;
+  - `parallel_tight`.
+- Trace loading, scene classification, reference family generation, style evaluation, and reporting.
 
-- This pass is research-only and must respect the repository's current AGENTS.md boundary: do not introduce OGM-specific source code until the original HOPE baseline is understood/reproduced and the user explicitly approves Stage 4.
-- Existing OGM research notes and the old implementation plan are useful starting points, but they predate the Stage 3 safe-speed tooling, the command-only 20K gate, and the default-off fast action-mask candidate.
-- The current code state makes a stronger integration rule possible: any future OGM work should be a separate opt-in experiment entry point with its own 20K/long-run gates, while the original HOPE SAC path and current safe-speed framework remain the comparison anchor.
-- Current Stage 3 context still argues against replacing HOPE's action mask, curriculum, scene scheduling, reward semantics, or hybrid Reeds-Shepp switching during the first OGM step. The first OGM design should change observation representation, not the planner contract.
-- New research note written to `docs/research/2026-06-20-rl-ogm-integration-current-code-research.md`.
-- Paper/code conclusion: the OGM paper keeps the HOPE-like hybrid RL plus RS plus action-mask structure; the new contribution is LiDAR/IMU-derived OGM perception alignment between simulation training and real inference.
-- The first approved OGM variant should use an explicit `ogm` modality, likely `target + action_mask + ogm` as policy inputs, while keeping lidar available as an internal helper for the current action-mask calculation. Removing lidar/mask entirely should be a later strict-OGM experiment.
-- Recommended proxy OGM grid: 64x64 with roughly 0.3125-0.3333 m/cell so the local crop covers about the current 64px BEV span and 10m lidar radius. The older 0.2 m/cell assumption is probably too narrow for a first HOPE-compatible local crop.
-- Code trap: adding `ogm` to `observation_shape` also requires extending `StateNorm.DEFAULT_UPDATE_MODAL` with `ogm: False`; otherwise SAC state normalization can break on the new key.
-- Code trap: OGM runner configs should copy `ACTOR_CONFIGS` and `CRITIC_CONFIGS` before mutating `n_modal`, `img_shape`, or `ogm_shape`, because these are global dictionaries in `configs.py`.
-- Tooling conclusion: future OGM runs should reuse the Stage 3 manifest/report/gate style rather than launching unmanaged ad hoc training runs.
+P0 excludes:
 
-## Stage 4 OGM Proxy Execution Findings - 2026-06-20
+- angled parking;
+- RS reranking;
+- reward shaping;
+- auxiliary trajectory heads;
+- MPC/OBCA post-optimization;
+- imitation-learning training;
+- any behavior-changing modification to training, reward, checkpoint, or planner execution.
 
-- The Stage 4 OGM proxy pipeline now has a default-off `ogm` observation path, explicit OGM actor/critic config support, a fixed `20 parallel + 50 perpendicular` simulation evaluation set, progress-gate utilities, and opt-in OGM training/launch wrappers.
-- The first OGM policy input contract is `target + action_mask + ogm`; RGB BEV is excluded from the OGM policy, while lidar remains available internally for the existing HOPE action-mask generator.
-- Direct runner execution from `D:\Github\HOPE` exposed the original HOPE current-working-directory dependency: `ParkingMapDLP` opens `../data/dlp.data`. The OGM runner now normalizes CWD to `D:\Github\HOPE\src` before constructing the environment.
-- Windows `.venv\Scripts\python.exe` can spawn a child Python process for actual training. Stage 4 launcher now records `initial_workload_pid`, resolves the child Python PID when present, records it as `workload_pid`, and starts the resource monitor against that actual PID.
-- The 1K OGM diagnostic run completed with `episode_count=1000`, `env_step_count=131691`, `training_budget_met=true`, no missing TensorBoard scalars, and `hard_reject_has_nonfinite=false`.
-- The 1K diagnostic produced finite `actor_loss`, `critic_loss`, `alpha`, `avg_reward`, and `step_num` scalars. This is a plumbing/health result only, not a quality or paper-reproduction result.
-- Trusted post-retarget resource samples from the 1K diagnostic show average process CPU about `5.95%`, average whole-GPU utilization about `35.01%`, and peak GPU memory about `3377 MB`.
-- PyTorch emitted a replay sampling performance warning for constructing a tensor from a list of NumPy arrays in `src\model\agent\sac_agent.py`; this is not a Stage 4 correctness blocker, but it is a likely future throughput investigation point if OGM long-run speed is poor.
+## Required Modules
+
+- `TraceLoader`: normalize existing Stage 4 trace JSON into a stable trajectory structure.
+- `SceneClassifier`: classify perpendicular/parallel scene subtype with explicit reasons.
+- `ReferenceFamilyGenerator`: generate route families, corridors, phase labels, expected cusp/gear ranges, slot-mouth windows, and clearance preferences.
+- `StyleEvaluator`: compute shape, behavior, clearance, and segment-level metrics.
+- `ReportWriter`: write JSON and Markdown reports with batch summaries and unsupported-case reasons.
+
+## Implementation Findings
+
+- P0 implementation landed under `tools/stage4/` as a default-off offline toolkit.
+- The schema layer now enforces finite numeric values, strict JSON-safe serialization, known style labels, known scene classes, string diagnosis/action-source sequences, and bool planner-route flags.
+- The loader accepts single-trace and collection trace JSON, validates duplicate/non-empty `case_uid`, handles older action payload shapes, computes target-polygon centroids correctly, and rejects non-finite summary/action-selection metrics at load time.
+- Shape metrics compare resampled trajectory geometry, so identical paths with different waypoint density do not produce false Hausdorff mismatch.
+- Manual scene-label overrides are validated immediately; invalid scene classes fail early instead of propagating into later report generation.
+- Unsupported evaluator reports preserve the classifier reason and supported empty-reference reports preserve their original scene class.
+- The report writer keeps all cases in `cases`, keeps unsupported cases in `unsupported_cases`, ranks top mismatches from supported cases only, writes per-case summaries, and protects `case_summaries/` from unsafe `case_uid` path components.
+- CLI hardening: zero-match `--case-filter` fails closed; `--reference-annotations` and `--visualization-dir` return explicit P0-not-implemented errors instead of acting as silent no-ops.
+
+## Implementation Plan Decisions
+
+- The implementation plan splits P0 into seven TDD slices: schema, metrics, loader, reference generation, evaluator, report/CLI, and integrated smoke verification.
+- New code should live under `tools/stage4/`; tests should live under `tools/stage4/tests/`.
+- The CLI entry point should be `tools/stage4/evaluate_trajectory_style.py`.
+- The first real-trace smoke target is `docs/research/stage4_ogm_120k_selected_traces_get_action.json`, with smoke output under ignored `raw_paper/trajectory_style_eval_runs/`.
+
+## Smoke Result
+
+The 2026-06-30 P0 smoke run used:
+
+```powershell
+.\.venv\Scripts\python.exe tools/stage4/evaluate_trajectory_style.py --trace-json docs/research/stage4_ogm_120k_selected_traces_get_action.json --output-dir raw_paper/trajectory_style_eval_runs/2026-06-30_p0_smoke --slot-types perpendicular,parallel --write-markdown --write-json --allow-unsupported
+```
+
+Result:
+
+- 4 cases loaded from the selected Stage 4 trace file.
+- 4 supported cases; 0 unsupported cases.
+- Case summaries written for `parallel_008`, `parallel_013`, `parallel_014`, and `parallel_016`.
+- All four selected cases are currently labeled `style_mismatch`; common diagnoses are `route_family_mismatch` and `unplanned_extra_cusp`, with `parallel_014` also showing `excessive_chatter`.
+- This is evaluation evidence only. It does not approve a behavior-changing experiment.
+
+## Metrics To Preserve In Implementation
+
+Shape:
+
+- L2 distance;
+- Hausdorff distance;
+- Fourier descriptor difference;
+- curvature mean/max/variation;
+- slot-mouth entry pose error.
+
+Behavior:
+
+- gear-shift count versus expected range;
+- cusp count and location;
+- steering sign changes;
+- low-speed direction chatter;
+- planned-cusp compliance.
+
+Clearance:
+
+- minimum obstacle clearance;
+- obstacle-side clearance bias;
+- corridor violation when available.
+
+Segment:
+
+- full trajectory score;
+- RL-segment mismatch;
+- RS-segment mismatch;
+- mismatch phase labels.
+
+## Diagnosis Labels
+
+Implementation should keep diagnosis explainable. Useful labels include:
+
+- `route_family_mismatch`
+- `slot_mouth_entry_too_shallow`
+- `slot_mouth_entry_too_late`
+- `excessive_chatter`
+- `unplanned_extra_cusp`
+- `object_side_clearance_too_close`
+- `curvature_shape_mismatch`
+- `rl_segment_mismatch`
+- `rs_segment_mismatch`
+
+## Key Design Boundary
+
+Human style should be represented as a route family with a corridor and phase labels, not as a single mandatory red-line polyline.
+
+Planned cusps in limited-space perpendicular or tight parallel parking are acceptable human-like maneuvers. Random low-speed direction chatter and extra unplanned cusps are not.
+
+## Useful Local Inputs
+
+- `docs/research/stage4_ogm_120k_selected_traces_get_action.json`
+- `docs/research/stage4_ogm_120k_selected_traces_choose_action.json`
+- `docs/research/stage4_ogm_fixed_eval_case_geometry_20260627.json`
+- User annotation screenshots under `raw_paper/2026-06-30-human-like-parking-trajectory-shape-research/attachments/user_annotations/`
+
+## Prior Stage 4 Boundary
+
+Current HOPE Stage 4 already uses a hybrid `RL + Reeds-Shepp + action mask` contract. This task should measure and explain style mismatch first. Behavior changes should be a later, separately approved experiment.
