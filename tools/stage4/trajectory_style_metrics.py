@@ -56,9 +56,13 @@ def mean_l2_distance(
     return float(np.mean(np.linalg.norm(first_sampled - second_sampled, axis=1)))
 
 
-def hausdorff_distance(first: Iterable[Iterable[float]], second: Iterable[Iterable[float]]) -> float:
-    first_array = _xy_array(first)
-    second_array = _xy_array(second)
+def hausdorff_distance(
+    first: Iterable[Iterable[float]],
+    second: Iterable[Iterable[float]],
+    sample_count: int = 64,
+) -> float:
+    first_array = np.asarray(resample_polyline(first, sample_count), dtype=float)
+    second_array = np.asarray(resample_polyline(second, sample_count), dtype=float)
     distances = np.linalg.norm(first_array[:, None, :] - second_array[None, :, :], axis=2)
     first_to_second = float(np.max(np.min(distances, axis=1)))
     second_to_first = float(np.max(np.min(distances, axis=0)))

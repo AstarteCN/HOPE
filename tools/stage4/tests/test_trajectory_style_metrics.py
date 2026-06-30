@@ -31,6 +31,12 @@ class TrajectoryStyleMetricsTests(unittest.TestCase):
         self.assertGreater(mean_l2_distance(base, shifted), 0.9)
         self.assertGreater(hausdorff_distance(base, shifted), 0.9)
 
+    def test_hausdorff_matches_identical_geometry_with_different_waypoint_density(self):
+        sparse = [[0.0, 0.0], [2.0, 0.0]]
+        dense = [[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]]
+
+        self.assertAlmostEqual(hausdorff_distance(sparse, dense), 0.0)
+
     def test_fourier_distance_is_small_for_identical_path(self):
         path = [[0.0, 0.0], [1.0, 0.5], [2.0, 0.0], [3.0, -0.5]]
 
