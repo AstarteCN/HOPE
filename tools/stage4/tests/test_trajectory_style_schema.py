@@ -1,9 +1,11 @@
+import json
 import unittest
 
 from tools.stage4.trajectory_style_schema import (
     ClearancePreferences,
     Pose2D,
     ReferenceFamily,
+    SceneClassification,
     StyleCaseReport,
     TrajectoryTrace,
     pose_from_mapping,
@@ -11,6 +13,24 @@ from tools.stage4.trajectory_style_schema import (
 
 
 class TrajectoryStyleSchemaTests(unittest.TestCase):
+    def _make_report(self, **overrides):
+        values = {
+            "case_uid": "parallel_001",
+            "scene_class": "parallel_standard",
+            "classification_reason": "parking_type=parallel; slot length is comfortable",
+            "selected_reference_family": "parallel_standard_reverse_s_curve",
+            "shape_metrics": {"l2_distance": 0.1},
+            "behavior_metrics": {"gear_shifts": 1},
+            "clearance_metrics": {"min_clearance_m": 2.0},
+            "segment_metrics": {"rl_style_score": 0.9},
+            "style_label": "human_like",
+            "style_score": 0.91,
+            "diagnosis": [],
+            "unsupported_reason": None,
+        }
+        values.update(overrides)
+        return StyleCaseReport(**values)
+
     def test_pose_from_mapping_requires_finite_xy_heading(self):
         pose = pose_from_mapping({"x": 1, "y": -2, "heading": 0.5, "speed": -1.0})
 
@@ -69,6 +89,40 @@ class TrajectoryStyleSchemaTests(unittest.TestCase):
         self.assertEqual(payload["style_label"], "human_like")
         self.assertEqual(reference.to_dict()["clearance_preferences"]["preferred_side"], "away_from_obstacle")
         self.assertEqual(trace.to_dict()["poses"][1]["heading"], 0.1)
+
+    def test_scene_classification_constructor_matches_downstream_plan(self):
+        classification = SceneClassification("parallel_standard", "parking_type=parallel", 0.7)
+
+        self.assertEqual(classification.scene_class, "parallel_standard")
+        self.assertEqual(classification.reason, "parking_type=parallel")
+        self.assertEqual(classification.confidence, 0.7)
+        self.assertEqual(classification.to_dict()["confidence"], 0.7)
+
+    def test_report_to_dict_supports_strict_json_dump(self):
+        report = self._make_report()
+
+        json.dumps(report.to_dict(), allow_nan=False, sort_keys=True)
+
+    def test_nested_unsupported_objects_raise_during_to_dict(self):
+        trace = TrajectoryTrace(
+            case_uid="parallel_001",
+            source_trace_path="trace.json",
+            scene_type="Sim-Complex",
+            slot_type="parallel",
+            start_pose=Pose2D(0.0, 0.0, 0.0),
+            target_pose=Pose2D(5.0, 1.0, 0.0),
+            poses=[Pose2D(0.0, 0.0, 0.0)],
+            actions=[[0.1, -0.5]],
+            action_sources=["RL"],
+            planner_route_active=[False],
+            raw_metrics={"bad": object()},
+        )
+        report = self._make_report(shape_metrics={"bad": object()})
+
+        with self.assertRaisesRegex(TypeError, "JSON-safe"):
+            trace.to_dict()
+        with self.assertRaisesRegex(TypeError, "JSON-safe"):
+            report.to_dict()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass, field
 from numbers import Real
 from typing import Any, Mapping, Optional, Sequence
@@ -37,18 +38,27 @@ def finite_float(value: Any, field_name: str) -> float:
     return result
 
 
-def _json_safe(value: Any) -> Any:
+def _json_safe(value: Any, field_name: str = "value") -> Any:
     if hasattr(value, "to_dict"):
         return value.to_dict()
     if isinstance(value, Mapping):
-        return {str(key): _json_safe(value[key]) for key in sorted(value, key=str)}
-    if isinstance(value, tuple):
-        return [_json_safe(item) for item in value]
-    if isinstance(value, list):
-        return [_json_safe(item) for item in value]
+        return {
+            str(key): _json_safe(value[key], f"{field_name}.{key}")
+            for key in sorted(value, key=str)
+        }
+    if isinstance(value, (tuple, list)):
+        return [_json_safe(item, field_name) for item in value]
+    if isinstance(value, (set, frozenset)):
+        return [_json_safe(item, field_name) for item in sorted(value, key=repr)]
+    if isinstance(value, os.PathLike):
+        return os.fspath(value)
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        return finite_float(value, field_name)
     if isinstance(value, Real) and not isinstance(value, bool):
-        return finite_float(value, "value")
-    return value
+        return finite_float(value, field_name)
+    raise TypeError(f"{field_name} contains unsupported non JSON-safe value: {type(value).__name__}")
 
 
 def _validate_known(value: str, known_values: frozenset[str], field_name: str) -> None:
@@ -160,20 +170,23 @@ class ReferenceFamily:
 
 @dataclass(frozen=True)
 class SceneClassification:
-    case_uid: str
     scene_class: str
     reason: str
+    confidence: float
+    case_uid: Optional[str] = None
     slot_type: Optional[str] = None
     attributes: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         _validate_known(self.scene_class, SUPPORTED_SCENE_CLASSES, "scene_class")
         payload: dict[str, Any] = {
-            "case_uid": self.case_uid,
             "scene_class": self.scene_class,
             "reason": self.reason,
-            "attributes": _json_safe(self.attributes),
+            "confidence": finite_float(self.confidence, "confidence"),
+            "attributes": _json_safe(self.attributes, "attributes"),
         }
+        if self.case_uid is not None:
+            payload["case_uid"] = self.case_uid
         if self.slot_type is not None:
             payload["slot_type"] = self.slot_type
         return payload
