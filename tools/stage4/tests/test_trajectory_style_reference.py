@@ -81,6 +81,72 @@ class TrajectoryStyleReferenceTests(unittest.TestCase):
         )
         self.assertNotIn("late_straighten", references[0].phase_labels)
 
+    def test_invalid_string_override_raises_immediately(self):
+        trace = _trace("override_invalid", "parallel", Pose2D(0.0, 0.0, 0.0), Pose2D(8.0, 0.0, 0.0))
+
+        with self.assertRaisesRegex(ValueError, "parallel_standrad.*override_invalid"):
+            classify_scene(trace, label_overrides={trace.case_uid: "parallel_standrad"})
+
+    def test_valid_string_override_serializes(self):
+        trace = _trace("override_string", "perpendicular", Pose2D(0.0, -8.0, 1.57), Pose2D(0.0, 0.0, 1.57))
+
+        classification = classify_scene(trace, label_overrides={trace.case_uid: "parallel_tight"})
+        payload = classification.to_dict()
+
+        self.assertEqual(classification.scene_class, "parallel_tight")
+        self.assertEqual(payload["scene_class"], "parallel_tight")
+        self.assertEqual(payload["confidence"], 1.0)
+
+    def test_valid_mapping_override_serializes(self):
+        trace = _trace("override_mapping", "perpendicular", Pose2D(0.0, -8.0, 1.57), Pose2D(0.0, 0.0, 1.57))
+
+        classification = classify_scene(trace, label_overrides={trace.case_uid: {"scene_class": "parallel_tight"}})
+        payload = classification.to_dict()
+
+        self.assertEqual(classification.scene_class, "parallel_tight")
+        self.assertEqual(payload["scene_class"], "parallel_tight")
+
+    def test_unsupported_slot_type_serializes_without_references(self):
+        trace = _trace("unsupported_angle", "angled", Pose2D(0.0, 0.0, 0.0), Pose2D(3.0, 4.0, 0.5))
+
+        classification = classify_scene(trace)
+
+        self.assertEqual(classification.to_dict()["scene_class"], "unsupported")
+        self.assertEqual(generate_reference_families(trace, classification), [])
+
+    def test_all_supported_reference_families_serialize(self):
+        traces = [
+            _trace("perpendicular_enough", "perpendicular", Pose2D(0.0, -8.0, 1.57), Pose2D(0.0, 0.0, 1.57)),
+            _trace(
+                "perpendicular_limited",
+                "perpendicular",
+                Pose2D(0.0, -3.0, 1.57),
+                Pose2D(0.0, 0.0, 1.57),
+                obstacles=[[[1.0, -2.0], [2.0, -2.0], [2.0, 0.0], [1.0, 0.0]]],
+            ),
+            _trace("parallel_standard", "parallel", Pose2D(0.0, 0.0, 0.0), Pose2D(8.0, 0.0, 0.0)),
+            _trace("parallel_tight", "parallel", Pose2D(0.0, 0.0, 0.0), Pose2D(4.5, 0.0, 0.0)),
+        ]
+
+        scene_classes = []
+        for trace in traces:
+            classification = classify_scene(trace)
+            references = generate_reference_families(trace, classification)
+
+            scene_classes.append(classification.to_dict()["scene_class"])
+            self.assertEqual(len(references), 1)
+            self.assertEqual(references[0].to_dict()["scene_class"], classification.scene_class)
+
+        self.assertEqual(
+            scene_classes,
+            [
+                "perpendicular_enough_space",
+                "perpendicular_limited_space",
+                "parallel_standard",
+                "parallel_tight",
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,6 +8,7 @@ from tools.stage4.trajectory_style_schema import (
     Pose2D,
     ReferenceFamily,
     SceneClassification,
+    SUPPORTED_SCENE_CLASSES,
     TrajectoryTrace,
 )
 
@@ -126,12 +127,21 @@ def _lookup_override(case_uid: str, label_overrides: Optional[Mapping[str, Any]]
 
     override = label_overrides[case_uid]
     if isinstance(override, str):
-        return override
+        return _validate_override_scene_class(case_uid, override)
     if isinstance(override, Mapping):
         scene_class = override.get("scene_class")
         if isinstance(scene_class, str):
-            return scene_class
+            return _validate_override_scene_class(case_uid, scene_class)
     raise TypeError(f"label override for {case_uid} must be a scene class string or mapping")
+
+
+def _validate_override_scene_class(case_uid: str, scene_class: str) -> str:
+    if scene_class not in SUPPORTED_SCENE_CLASSES:
+        raise ValueError(
+            f"invalid scene class override {scene_class!r} for case {case_uid!r}; "
+            f"expected one of {sorted(SUPPORTED_SCENE_CLASSES)}"
+        )
+    return scene_class
 
 
 def _approach_distance(trace: TrajectoryTrace) -> float:
