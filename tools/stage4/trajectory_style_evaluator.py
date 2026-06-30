@@ -30,8 +30,10 @@ def evaluate_trace_style(
     classification: SceneClassification,
     references: Sequence[ReferenceFamily],
 ) -> StyleCaseReport:
-    if classification.scene_class == "unsupported" or not references:
-        return _unsupported_report(trace, classification)
+    if classification.scene_class == "unsupported":
+        return _unsupported_report(trace, classification, classification.reason)
+    if not references:
+        return _unsupported_report(trace, classification, f"no reference family for {classification.scene_class}")
 
     path_points = poses_to_xy(trace.poses)
     speeds = _series_from_actions_or_poses(trace.actions, trace.poses, action_index=1, pose_attr="speed")
@@ -42,7 +44,7 @@ def evaluate_trace_style(
     clearance_metrics = _clearance_metrics(path_points, trace.obstacles, best_reference)
     segment_metrics = _segment_metrics(trace)
     score = _score(shape_metrics, behavior_metrics, best_reference)
-    diagnosis = _diagnosis(best_reference, behavior_metrics, clearance_metrics)
+    diagnosis = _diagnosis(best_reference, shape_metrics, behavior_metrics, clearance_metrics, score)
     style_label = _style_label(score, clearance_metrics)
 
     return StyleCaseReport(
@@ -60,11 +62,14 @@ def evaluate_trace_style(
     )
 
 
-def _unsupported_report(trace: TrajectoryTrace, classification: SceneClassification) -> StyleCaseReport:
-    reason = _normalize_unsupported_reason(classification)
+def _unsupported_report(
+    trace: TrajectoryTrace,
+    classification: SceneClassification,
+    reason: str,
+) -> StyleCaseReport:
     return StyleCaseReport(
         case_uid=trace.case_uid,
-        scene_class="unsupported",
+        scene_class=classification.scene_class,
         classification_reason=classification.reason,
         selected_reference_family=None,
         shape_metrics={},
@@ -76,15 +81,6 @@ def _unsupported_report(trace: TrajectoryTrace, classification: SceneClassificat
         diagnosis=["route_family_mismatch"],
         unsupported_reason=reason,
     )
-
-
-def _normalize_unsupported_reason(classification: SceneClassification) -> str:
-    reason = classification.reason
-    prefix = "unsupported slot type:"
-    if reason.startswith(prefix):
-        slot_type = reason[len(prefix) :].strip()
-        return f"unsupported parking_type={slot_type}"
-    return reason
 
 
 def _best_reference(
@@ -103,6 +99,9 @@ def _best_reference(
                 score,
                 reference,
                 {
+                    "l2_distance": l2,
+                    "hausdorff_distance": hausdorff,
+                    "fourier_descriptor_distance": fourier,
                     "l2": l2,
                     "hausdorff": hausdorff,
                     "fourier": fourier,
@@ -175,16 +174,20 @@ def _segment_metrics(trace: TrajectoryTrace) -> dict[str, Any]:
 
 def _diagnosis(
     reference: ReferenceFamily,
+    shape_metrics: dict[str, Any],
     behavior_metrics: dict[str, Any],
     clearance_metrics: dict[str, Any],
+    score: float,
 ) -> list[str]:
     diagnosis: list[str] = []
+    if score < 0.55 or finite_float(shape_metrics["shape_score"], "shape_score") < 0.55:
+        diagnosis.append("route_family_mismatch")
     if behavior_metrics["low_speed_chatter"] > 0:
         diagnosis.append("excessive_chatter")
     if _excess_over_range(behavior_metrics["cusp_count"], reference.expected_cusp_count) > 0:
         diagnosis.append("unplanned_extra_cusp")
     clearance = clearance_metrics["min_clearance_m"]
-    if clearance is not None and clearance < 0.15:
+    if clearance is not None and clearance < reference.clearance_preferences.min_clearance_m:
         diagnosis.append("object_side_clearance_too_close")
     return diagnosis
 
