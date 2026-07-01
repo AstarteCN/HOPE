@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 from collections import defaultdict
 from copy import deepcopy
@@ -19,6 +20,24 @@ SRC_ROOT = REPO_ROOT / "src"
 for import_root in (REPO_ROOT, SRC_ROOT):
     if str(import_root) not in sys.path:
         sys.path.insert(0, str(import_root))
+
+from tools.stage4.stage4_target_transform import (  # noqa: E402
+    TARGET_MODE_AUTO,
+    TARGET_MODE_REQUEST_CHOICES,
+    resolve_checkpoint_target_mode,
+    validate_target_mode,
+)
+from tools.stage4.stage4_maneuver_stability import (  # noqa: E402
+    APPLY_TO_MODES,
+    MODE_OFF,
+    MODES as MANEUVER_STABILITY_MODES,
+    ManeuverStabilityConfig,
+    ManeuverStabilityResult,
+    ManeuverStabilityTracker,
+)
+
+MANEUVER_STABILITY_MODE_AUTO = "auto"
+MANEUVER_STABILITY_MODE_REQUEST_CHOICES = (MANEUVER_STABILITY_MODE_AUTO,) + MANEUVER_STABILITY_MODES
 
 
 def count_gear_shifts(speeds: Iterable[float]) -> int:
@@ -62,6 +81,95 @@ def summarize_eval_records(
             pl = None
         summary[split] = {"psr": psr, "angs": angs, "pl": pl}
     return summary
+
+
+def build_eval_result(
+    records: Iterable[Mapping[str, object]],
+    target_mode: str,
+    target_mode_source: Mapping[str, object] | None = None,
+    maneuver_stability_config: ManeuverStabilityConfig | Mapping[str, object] | None = None,
+    maneuver_stability_summary: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    records_list = list(records)
+    mode = validate_target_mode(target_mode)
+    result = {
+        "target_mode": mode,
+        "records": records_list,
+        "summary": summarize_eval_records(records_list),
+    }
+    if target_mode_source is not None:
+        result["target_mode_source"] = dict(target_mode_source)
+    maneuver_config = _coerce_maneuver_stability_config(maneuver_stability_config)
+    if maneuver_config.mode != MODE_OFF:
+        result["maneuver_stability_config"] = maneuver_config.to_dict()
+    if maneuver_config.mode != MODE_OFF and maneuver_stability_summary is not None:
+        result["maneuver_stability_summary"] = dict(maneuver_stability_summary)
+    return result
+
+
+def _coerce_maneuver_stability_config(
+    config: ManeuverStabilityConfig | Mapping[str, object] | None,
+) -> ManeuverStabilityConfig:
+    if isinstance(config, ManeuverStabilityConfig):
+        return config
+    return ManeuverStabilityConfig.from_mapping(config)
+
+
+def _candidate_state_paths_for_checkpoint(checkpoint_path: Path) -> list[Path]:
+    candidates: list[Path] = []
+    match = re.fullmatch(r"SAC_(\d+)\.pt", checkpoint_path.name)
+    if match:
+        candidates.append(checkpoint_path.with_name("stage4_state_%s.pt" % match.group(1)))
+    candidates.append(checkpoint_path.with_name("stage4_state_latest.pt"))
+    return candidates
+
+
+def resolve_checkpoint_maneuver_stability_config(
+    checkpoint_path: str | Path,
+    requested_config: ManeuverStabilityConfig | Mapping[str, object] | None = None,
+) -> tuple[ManeuverStabilityConfig, dict[str, str]]:
+    if requested_config is not None:
+        config = _coerce_maneuver_stability_config(requested_config)
+        return config, {"type": "explicit", "value": config.mode}
+
+    import torch
+
+    checkpoint = Path(checkpoint_path)
+    for state_path in _candidate_state_paths_for_checkpoint(checkpoint):
+        if not state_path.exists():
+            continue
+        state = torch.load(state_path, map_location="cpu", weights_only=False)
+        if "maneuver_stability_config" in state:
+            config = ManeuverStabilityConfig.from_mapping(state["maneuver_stability_config"])
+            return config, {"type": "stage4_state", "path": str(state_path)}
+        return ManeuverStabilityConfig(), {"type": "stage4_state_legacy_default", "path": str(state_path)}
+    return ManeuverStabilityConfig(), {"type": "legacy_default"}
+
+
+def apply_maneuver_stability_to_eval_action(
+    *,
+    tracker: ManeuverStabilityTracker,
+    action: Any,
+    source: str,
+) -> ManeuverStabilityResult:
+    return tracker.apply(action, source=source)
+
+
+def get_eval_action_with_maneuver_stability(
+    *,
+    parking_agent: Any,
+    tracker: ManeuverStabilityTracker,
+    obs: Any,
+) -> tuple[np.ndarray, ManeuverStabilityResult]:
+    was_executing_rs = bool(getattr(parking_agent, "executing_rs", False))
+    action, _ = parking_agent.get_action(obs)
+    action_source = "RS" if was_executing_rs else "RL"
+    action_result = apply_maneuver_stability_to_eval_action(
+        tracker=tracker,
+        action=action,
+        source=action_source,
+    )
+    return action_result.applied_action, action_result
 
 
 def build_ogm_agent_config(env: Any) -> dict[str, object]:
@@ -112,32 +220,35 @@ def _case_status_name(status: object) -> str:
     return getattr(status, "name", str(status))
 
 
-def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, output_json: str | Path) -> dict[str, object]:
+def evaluate_checkpoint(
+    checkpoint_path: str | Path,
+    cases_path: str | Path,
+    output_json: str | Path,
+    target_mode: str = TARGET_MODE_AUTO,
+    maneuver_stability_config: ManeuverStabilityConfig | Mapping[str, object] | None = None,
+) -> dict[str, object]:
     os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
     os.environ.setdefault("TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD", "1")
 
     import torch
     from configs import VALID_SPEED
-    from env.car_parking_base import CarParking
-    from env.env_wrapper import CarParkingWrapper
     from env.vehicle import Status
     from model.agent.parking_agent import ParkingAgent, RsPlanner
     from model.agent.sac_agent import SACAgent
     from tools.stage4.stage4_ogm_cases import load_cases
+    from tools.stage4.train_HOPE_sac_ogm import build_stage4_env
 
     checkpoint_path = Path(checkpoint_path)
     cases_path = Path(cases_path)
     output_json = Path(output_json)
-
-    raw_env = CarParking(
-        render_mode="rgb_array",
-        verbose=False,
-        use_img_observation=False,
-        use_lidar_observation=True,
-        use_action_mask=True,
-        use_ogm_observation=True,
+    mode, target_mode_source = resolve_checkpoint_target_mode(checkpoint_path, target_mode)
+    maneuver_config, maneuver_config_source = resolve_checkpoint_maneuver_stability_config(
+        checkpoint_path,
+        requested_config=maneuver_stability_config,
     )
-    env = CarParkingWrapper(raw_env)
+    maneuver_tracker = ManeuverStabilityTracker(maneuver_config)
+
+    env = build_stage4_env(visualize=False, verbose=False, target_mode=mode)
     try:
         rl_agent = SACAgent(build_ogm_agent_config(env))
         rl_agent.load(str(checkpoint_path), params_only=True)
@@ -156,6 +267,7 @@ def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, out
 
                 obs = env.reset(int(case["hope_case_id"]), None, str(case["hope_level"]))
                 parking_agent.reset()
+                maneuver_tracker.reset_episode()
                 done = False
                 step_num = 0
                 path_length = 0.0
@@ -165,7 +277,11 @@ def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, out
 
                 while not done:
                     step_num += 1
-                    action, _ = parking_agent.get_action(obs)
+                    action, _action_result = get_eval_action_with_maneuver_stability(
+                        parking_agent=parking_agent,
+                        tracker=maneuver_tracker,
+                        obs=obs,
+                    )
                     speeds.append(float(action[1]))
                     next_obs, _reward, done, info = env.step(action)
                     obs = next_obs
@@ -188,7 +304,20 @@ def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, out
                     }
                 )
 
-        result = {"records": records, "summary": summarize_eval_records(records)}
+        maneuver_snapshot = maneuver_tracker.snapshot()
+        if maneuver_config.mode == MODE_OFF:
+            result = build_eval_result(records, mode, target_mode_source)
+        else:
+            result = build_eval_result(
+                records,
+                mode,
+                target_mode_source,
+                maneuver_stability_config=maneuver_config,
+                maneuver_stability_summary={
+                    "config_source": maneuver_config_source,
+                    "counters": maneuver_snapshot["counters"],
+                },
+            )
         output_json.parent.mkdir(parents=True, exist_ok=True)
         output_json.write_text(
             json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False) + "\n",
@@ -196,7 +325,7 @@ def evaluate_checkpoint(checkpoint_path: str | Path, cases_path: str | Path, out
         )
         return result
     finally:
-        raw_env.close()
+        env.close()
 
 
 def _parse_args() -> argparse.Namespace:
@@ -204,12 +333,37 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--checkpoint", required=True, type=Path)
     parser.add_argument("--cases", required=True, type=Path)
     parser.add_argument("--output-json", required=True, type=Path)
+    parser.add_argument("--target-mode", choices=TARGET_MODE_REQUEST_CHOICES, default=TARGET_MODE_AUTO)
+    parser.add_argument(
+        "--maneuver_stability_mode",
+        choices=MANEUVER_STABILITY_MODE_REQUEST_CHOICES,
+        default=MANEUVER_STABILITY_MODE_AUTO,
+    )
+    parser.add_argument("--maneuver_stability_apply_to", choices=APPLY_TO_MODES, default="rl")
+    parser.add_argument("--maneuver_stability_min_speed", type=float, default=1e-6)
+    parser.add_argument("--maneuver_stability_hold_steps", type=int, default=1)
+    parser.add_argument("--maneuver_stability_max_hold_speed", type=float, default=None)
     return parser.parse_args()
 
 
 def main() -> int:
     args = _parse_args()
-    evaluate_checkpoint(args.checkpoint, args.cases, args.output_json)
+    maneuver_config = None
+    if args.maneuver_stability_mode != MANEUVER_STABILITY_MODE_AUTO:
+        maneuver_config = ManeuverStabilityConfig(
+            mode=args.maneuver_stability_mode,
+            apply_to=args.maneuver_stability_apply_to,
+            min_speed=args.maneuver_stability_min_speed,
+            hold_steps=args.maneuver_stability_hold_steps,
+            max_hold_speed=args.maneuver_stability_max_hold_speed,
+        )
+    evaluate_checkpoint(
+        args.checkpoint,
+        args.cases,
+        args.output_json,
+        target_mode=args.target_mode,
+        maneuver_stability_config=maneuver_config,
+    )
     return 0
 
 

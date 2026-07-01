@@ -4,12 +4,32 @@ param(
     [int]$StartEpisode = 0,
     [int]$EvalEpisode = 200,
     [string]$ResumeCheckpoint,
+    [string]$ResumeState,
     [string]$ExpDirOverride,
     [switch]$DryRun,
+    [ValidateSet('legacy-coscos','corrected-cossin')][string]$TargetMode = 'legacy-coscos',
+    [ValidateSet('off','diagnostic','direction_hold')][string]$ManeuverStabilityMode = 'off',
+    [ValidateSet('rl','rl-rs','all')][string]$ManeuverStabilityApplyTo = 'rl',
+    [double]$ManeuverStabilityMinSpeed = 0.000001,
+    [int]$ManeuverStabilityHoldSteps = 1,
+    [Nullable[double]]$ManeuverStabilityMaxHoldSpeed = $null,
     [string]$ChangedKnobsJson = '{"policy_inputs":"target+action_mask+ogm","rgb_bev_policy":false,"internal_lidar_for_action_mask":true}'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not [string]::IsNullOrWhiteSpace($ResumeState) -and -not [string]::IsNullOrWhiteSpace($ResumeCheckpoint)) {
+    throw "-ResumeState cannot be combined with -ResumeCheckpoint. Use one continuation source."
+}
+if (-not [string]::IsNullOrWhiteSpace($ResumeState) -and $StartEpisode -le 0) {
+    throw "-ResumeState requires -StartEpisode greater than 0."
+}
+if ($TargetMode -eq 'corrected-cossin' -and (
+        -not [string]::IsNullOrWhiteSpace($ResumeCheckpoint) -or
+        ($StartEpisode -ne 0 -and [string]::IsNullOrWhiteSpace($ResumeState))
+    )) {
+    throw "-TargetMode corrected-cossin must start from a fresh run or matching -ResumeState; do not pass -ResumeCheckpoint or continue without -ResumeState."
+}
 
 function ConvertTo-ProcessArgument {
     param([AllowNull()][string]$Argument)
@@ -33,6 +53,12 @@ function Join-ProcessArgumentList {
 }
 
 $changedKnobs = $ChangedKnobsJson | ConvertFrom-Json -ErrorAction Stop
+$changedKnobs | Add-Member -NotePropertyName target_mode -NotePropertyValue $TargetMode -Force
+$changedKnobs | Add-Member -NotePropertyName maneuver_stability_mode -NotePropertyValue $ManeuverStabilityMode -Force
+$changedKnobs | Add-Member -NotePropertyName maneuver_stability_apply_to -NotePropertyValue $ManeuverStabilityApplyTo -Force
+$changedKnobs | Add-Member -NotePropertyName maneuver_stability_min_speed -NotePropertyValue $ManeuverStabilityMinSpeed -Force
+$changedKnobs | Add-Member -NotePropertyName maneuver_stability_hold_steps -NotePropertyValue $ManeuverStabilityHoldSteps -Force
+$changedKnobs | Add-Member -NotePropertyName maneuver_stability_max_hold_speed -NotePropertyValue $ManeuverStabilityMaxHoldSpeed -Force
 
 $RepoRoot = (Resolve-Path -LiteralPath (Join-Path -Path $PSScriptRoot -ChildPath '..\..')).Path
 $SrcDir = (Resolve-Path -LiteralPath (Join-Path -Path $RepoRoot -ChildPath 'src')).Path
@@ -64,15 +90,34 @@ $args = @(
     '--train_episode', "$TrainEpisode",
     '--start_episode', "$StartEpisode",
     '--eval_episode', "$EvalEpisode",
+    '--target_mode', $TargetMode,
+    '--maneuver_stability_mode', $ManeuverStabilityMode,
+    '--maneuver_stability_apply_to', $ManeuverStabilityApplyTo,
+    '--maneuver_stability_min_speed', "$ManeuverStabilityMinSpeed",
+    '--maneuver_stability_hold_steps', "$ManeuverStabilityHoldSteps",
     '--run_dir', $RunDir,
     '--visualize=',
     '--verbose='
 )
+if ($null -ne $ManeuverStabilityMaxHoldSpeed) {
+    $args += @('--maneuver_stability_max_hold_speed', "$ManeuverStabilityMaxHoldSpeed")
+}
 if (-not [string]::IsNullOrWhiteSpace($ResumeCheckpoint)) {
     $args += @('--resume_checkpoint', $ResumeCheckpoint)
 }
+if (-not [string]::IsNullOrWhiteSpace($ResumeState)) {
+    $args += @('--resume_state', $ResumeState)
+}
 $runnerArgumentString = Join-ProcessArgumentList $args
 $resumeCheckpointForManifest = if ([string]::IsNullOrWhiteSpace($ResumeCheckpoint)) { $null } else { $ResumeCheckpoint }
+$resumeStateForManifest = if ([string]::IsNullOrWhiteSpace($ResumeState)) { $null } else { $ResumeState }
+$continuationType = if ($null -ne $resumeStateForManifest) {
+    'full_state'
+} elseif ($null -ne $resumeCheckpointForManifest) {
+    'checkpoint_based'
+} else {
+    'fresh'
+}
 
 $initialWorkloadPid = $null
 $workloadPid = $null
@@ -122,7 +167,10 @@ $meta = [ordered]@{
     train_episode = $TrainEpisode
     start_episode = $StartEpisode
     eval_episode = $EvalEpisode
+    target_mode = $TargetMode
     resume_checkpoint = $resumeCheckpointForManifest
+    resume_state = $resumeStateForManifest
+    continuation_type = $continuationType
     dry_run = [bool]$DryRun
     runner_args = $args
     runner_argument_string = $runnerArgumentString

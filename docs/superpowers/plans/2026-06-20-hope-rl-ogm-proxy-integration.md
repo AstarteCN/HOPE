@@ -2142,20 +2142,99 @@ git commit -m "Record Stage 4 OGM 20K gate"
 
 ---
 
-### Task 13: Long-Run 10K Gate Monitoring To 80K-120K
+### Task 13: Full-State Stage 4 Continuation Before Further Segmented KPI Gates
+
+**Context update, 2026-06-22:** User inspection of TensorBoard DLP curves showed that each 10K segment has a similar local shape. Code inspection confirmed the current continuation is model-checkpoint based: it restores SAC model/optimizer/state-normalization checkpoint data and global episode numbering, but resets replay memory, RNG state, `SceneChoose`, `DlpCaseChoose`, `total_step_num`, and local training histories. This is useful for diagnostic gates, but it is not equivalent to one continuous long run.
+
+**Files:**
+- Modify: `D:\Github\HOPE\tools\stage4\train_HOPE_sac_ogm.py`
+- Modify: `D:\Github\HOPE\tools\stage4\launch_stage4_ogm.ps1`
+- Modify/Create tests under `D:\Github\HOPE\tools\stage4\tests\`
+- Modify: `D:\Github\HOPE\docs\research\2026-06-20-stage4-ogm-proxy-long-run.md`
+- Modify: `D:\Github\HOPE\task_plan.md`
+- Modify: `D:\Github\HOPE\findings.md`
+- Modify: `D:\Github\HOPE\progress.md`
+
+- [x] **Step 1: Write failing tests for full-state serialization**
+
+Add tests proving Stage 4 can serialize and restore:
+
+- SAC checkpoint path or embedded SAC state.
+- Replay memory contents or an explicitly versioned replay snapshot.
+- `total_step_num`.
+- `SceneChoose.scene_record` and `SceneChoose.success_record`.
+- `DlpCaseChoose.case_record` and `DlpCaseChoose.case_success_rate`.
+- NumPy RNG state.
+- Torch RNG state and CUDA RNG state when CUDA is available.
+- `best_success_rate`.
+- Local histories needed for TensorBoard/report continuity.
+
+Expected red state: current runner has no full-state checkpoint mechanism.
+
+- [x] **Step 2: Implement explicit full-state checkpoint helpers**
+
+Add Stage4-only helpers rather than changing original `src/train` defaults. Prefer a versioned artifact name such as `stage4_state_<episode>.pt` or `stage4_state_latest.pt` next to the existing `SAC_<episode>.pt`.
+
+The full-state artifact must be explicit and reviewable. It should not silently alter original HOPE SAC checkpoints or author checkpoints.
+
+- [x] **Step 3: Add full-state resume CLI and launcher support**
+
+Add explicit flags, for example:
+
+```powershell
+.\tools\stage4\launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_60k_fullstate -TrainEpisode 60000 -StartEpisode 50000 -ResumeState D:\Github\HOPE\src\log\exp\...\stage4_state_49999.pt
+```
+
+Validation rules:
+
+- `-ResumeState` implies `StartEpisode > 0`.
+- `-ResumeState` and model-only `-ResumeCheckpoint` must not be confused in manifests.
+- Manifest must record `continuation_type="full_state"` for full-state runs.
+- If only `-ResumeCheckpoint` is used, manifest must keep `continuation_type="checkpoint_based"` and reports must caveat it as diagnostic.
+
+- [x] **Step 4: Verify resumed state equivalence with a bounded deterministic test**
+
+Run a short bounded training path and compare:
+
+- Single uninterrupted path from episode N to N+M.
+- Interrupted path saved at N and resumed from full-state artifact to N+M.
+
+Use deterministic seeds and a small bounded budget. The verification does not need to prove floating-point bit identity across every operation if CUDA nondeterminism prevents it, but it must prove the restored counters, chooser histories, replay length, RNG progression, checkpoint naming, and TensorBoard step continuity behave as intended.
+
+Result, 2026-06-22: `tools/stage4/verify_stage4_full_state_resume.py` generated `docs/research/2026-06-22-stage4-full-state-resume-verification.json` and `.md`. The bounded deterministic runner-state simulation passed: direct 8-episode path and interrupted/resumed path matched restored counters, replay length, chooser histories, RNG progression including CUDA, checkpoint naming, and TensorBoard global steps. This does not prove bitwise real SAC learning-trajectory equivalence.
+
+- [x] **Step 5: Decide current-run recovery policy**
+
+After the current 50K diagnostic gate:
+
+- If no Stage 4 semantic code changed and full-state continuation is ready, prefer launching the next gate from the latest full-state artifact.
+- If only model checkpoints exist for the old segments, either label the next segment diagnostic or restart a clean uninterrupted/full-state-tracked run from scratch.
+- Do not claim the 30K/40K/50K model-only ladder is equivalent to a continuous 50K learning process.
+
+Decision, 2026-06-22: the old 50K checkpoint-based segment completed and is diagnostic only. It produced `SAC_49999.pt`, but no trustworthy full-state artifact spanning the prior 0K-50K process exists because the segment was launched before Task 13 full-state support. Its fixed eval was Sim-Normal PSR `1.000`, ANGS `3.200`, PL `14.431`; Sim-Complex PSR `0.900`, ANGS `39.667`, PL `45.010`. The old model-only gate policy would return `grace-10k`, and the full-state boundary now supersedes automatic checkpoint-only continuation. Do not launch a 60K model-only segment from `SAC_49999.pt`; the next KPI-reproduction run should be clean/full-state-tracked or explicitly full-state-resumed from a matching `stage4_state_<episode>.pt`.
+
+- [x] **Step 6: Update docs and progress state**
+
+Update the long-run report and root planning files with the full-state continuation decision, tests, and any restart/resume choice.
+
+---
+
+### Task 14: Long-Run 10K Gate Monitoring To 80K-120K
 
 **Files:**
 - Modify: `D:\Github\HOPE\docs\research\2026-06-20-stage4-ogm-proxy-long-run.md`
 
 - [ ] **Step 1: Continue or relaunch the OGM long run according to 20K decision**
 
-If the 20K decision is `continue`, use the existing process if it is still running. If it stopped at exactly 20K, relaunch with Stage4 checkpoint-based continuation only when no implementation semantics changed. The continuation command must preserve global episode numbering with `-StartEpisode 20000`; it does not restore replay buffer, RNG, curriculum/scenario chooser state, DLP chooser state, reward history, or `total_step_num` from the checkpoint:
+If the 20K decision is `continue`, use the existing process if it is still running. If it stopped at exactly 20K, relaunch with full-state continuation when a matching `stage4_state_<episode>.pt` exists. Model-only checkpoint-based continuation may be used only as a diagnostic bridge and must preserve global episode numbering with `-StartEpisode 20000`; it does not restore replay buffer, RNG, curriculum/scenario chooser state, DLP chooser state, reward history, or `total_step_num` from the checkpoint:
 
 ```powershell
 cd D:\Github\HOPE
-$Checkpoint20K = 'D:\Github\HOPE\src\log\exp\sac_ogm_stage4_ogm_proxy_20k_20260621_005526\SAC_19999.pt'
-.\tools\stage4\launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_long -TrainEpisode 100000 -EvalEpisode 70 -ResumeCheckpoint $Checkpoint20K -StartEpisode 20000 -ChangedKnobsJson '{"resume_from":"SAC_19999.pt","start_episode":20000,"policy_inputs":"target+action_mask+ogm","continuation_type":"checkpoint_based"}'
+$State20K = 'D:\Github\HOPE\src\log\exp\sac_ogm_stage4_ogm_proxy_fullstate_20k_...\stage4_state_19999.pt'
+.\tools\stage4\launch_stage4_ogm.ps1 -RunName stage4_ogm_proxy_long_fullstate -TrainEpisode 30000 -EvalEpisode 70 -ResumeState $State20K -StartEpisode 20000 -ChangedKnobsJson '{"resume_from":"stage4_state_19999.pt","start_episode":20000,"policy_inputs":"target+action_mask+ogm","continuation_type":"full_state"}'
 ```
+
+Current update, 2026-06-22: no matching full-state artifact exists for the old 20K/30K/40K/50K checkpoint-only ladder. Do not use the old `SAC_49999.pt` as a KPI-reproduction continuation source. The next production-quality long run should either restart cleanly from episode 0 with full-state snapshots enabled, or resume only from a `stage4_state_<episode>.pt` produced by that clean/full-state-tracked run.
 
 If OGM rasterizer, observation semantics, reward semantics, network shape, or state normalization changed after the 20K gate, restart from scratch:
 
@@ -2268,7 +2347,7 @@ For later gates, set `$Episode` to `40000`, `50000`, `60000`, `70000`, `80000`, 
 
 ---
 
-### Task 14: Final OGM KPI Comparison And Documentation
+### Task 15: Final OGM KPI Comparison And Documentation
 
 **Files:**
 - Create: `D:\Github\HOPE\docs\research\2026-06-20-stage4-ogm-proxy-final-report.md`
@@ -2391,4 +2470,4 @@ Before long training:
 
 ## Execution Handoff
 
-Recommended execution mode: Subagent-Driven. Dispatch a fresh subagent for Tasks 1-9, review each commit, then execute Tasks 10-14 with explicit user-visible checkpoints before 1K, 20K, and every 10K long-run gate.
+Recommended execution mode: Subagent-Driven. Dispatch a fresh subagent for Tasks 1-9, review each commit, then execute Tasks 10-15 with explicit user-visible checkpoints before 1K, 20K, full-state continuation rollout, and every 10K long-run gate.
