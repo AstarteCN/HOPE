@@ -99,6 +99,10 @@ TOLERANT_TIME = 200
 USE_LIDAR = True
 USE_IMG = True
 USE_ACTION_MASK = True
+USE_OGM = False
+OGM_SIZE = 64
+OGM_RESOLUTION = 1.0 / 3.0
+OGM_CHANNELS = 2
 MAX_DIST_TO_DEST = 20
 K = 12 # the render scale
 RS_MAX_DIST = 10
@@ -144,6 +148,7 @@ ACTOR_CONFIGS = {
     'target_shape':5,
     'action_mask_shape':N_DISCRETE_ACTION if USE_ACTION_MASK else None,
     'img_shape':(3,64,64) if USE_IMG else None,
+    'ogm_shape': (OGM_CHANNELS, OGM_SIZE, OGM_SIZE) if USE_OGM else None,
     'output_size':2,
     'embed_size':128,
     'hidden_size':256,
@@ -164,6 +169,7 @@ CRITIC_CONFIGS = {
     'target_shape':5,
     'action_mask_shape':N_DISCRETE_ACTION if USE_ACTION_MASK else None,
     'img_shape':(3,64,64) if USE_IMG else None,
+    'ogm_shape': (OGM_CHANNELS, OGM_SIZE, OGM_SIZE) if USE_OGM else None,
     'output_size':1,
     'embed_size':128,
     'hidden_size':256,

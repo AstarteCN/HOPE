@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "note": "measurement_only_not_quality_evidence",
+  "created_at_utc": "2026-06-19T15:03:49+00:00",
+  "original_hope_imports": [
+    "train.train_HOPE_sac.SceneChoose",
+    "train.train_HOPE_sac.DlpCaseChoose",
+    "env.car_parking_base.CarParking",
+    "env.env_wrapper.CarParkingWrapper",
+    "model.agent.parking_agent.ParkingAgent",
+    "model.agent.parking_agent.RsPlanner",
+    "model.agent.sac_agent.SACAgent",
+    "model.replay_memory.ReplayMemory"
+  ],
+  "cli_args": {
+    "episodes": 3,
+    "max_steps": 50,
+    "updates": 5
+  },
+  "environment": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "sdl_videodriver": "dummy",
+    "torch_force_no_weights_only_load": "1",
+    "torch_version": "2.11.0+cu128",
+    "torch_cuda_available": true,
+    "torch_device_count": 1,
+    "torch_cuda_device_name": "NVIDIA GeForce RTX 4080 SUPER"
+  },
+  "total_seconds": 4.9530860998202115,
+  "measured_component_seconds": 2.2256578013766557,
+  "components": {
+    "ParkingAgent.get_action": {
+      "seconds": 0.6068079003598541,
+      "calls": 116,
+      "avg_ms": 5.231102589309088,
+      "percent_measured_wall": 27.264204766092963
+    },
+    "SACAgent.update": {
+      "seconds": 0.3004660999868065,
+      "calls": 5,
+      "avg_ms": 60.0932199973613,
+      "percent_measured_wall": 13.500103196500223
+    },
+    "env.reset": {
+      "seconds": 0.18178050010465086,
+      "calls": 3,
+      "avg_ms": 60.59350003488362,
+      "percent_measured_wall": 8.167495469978023
+    },
+    "env.step": {
+      "seconds": 1.1285723014734685,
+      "calls": 116,
+      "avg_ms": 9.729071564426452,
+      "percent_measured_wall": 50.70735945010966
+    },
+    "replay.push": {
+      "seconds": 0.007459799526259303,
+      "calls": 116,
+      "avg_ms": 0.06430861660568366,
+      "percent_measured_wall": 0.3351727979766309
+    },
+    "replay.sample": {
+      "seconds": 0.0005711999256163836,
+      "calls": 6,
+      "avg_ms": 0.09519998760273059,
+      "percent_measured_wall": 0.025664319342491658
+    }
+  },
+  "episodes_completed": 3,
+  "transitions_collected": 116,
+  "updates_requested": 5,
+  "updates_completed": 5,
+  "episode_summaries": [
+    {
+      "episode": 1,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 50,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.10372734184122369
+    },
+    {
+      "episode": 2,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 16,
+      "done": true,
+      "status": "Status.ARRIVED",
+      "total_reward": 5.503948414833924
+    },
+    {
+      "episode": 3,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 50,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": 0.14594650732106595
+    }
+  ],
+  "skipped_components": [],
+  "notes": [
+    "measurement_only_not_quality_evidence",
+    "bounded diagnostic only; do not use as Stage 3 training-quality evidence",
+    "timing wrappers are installed only on objects created by this diagnostic process"
+  ]
+}

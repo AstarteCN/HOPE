@@ -6,8 +6,9 @@ from scipy.ndimage.filters import minimum_filter1d
 from configs import *
 
 class ActionMask():
-    def __init__(self, VehicleBox=VehicleBox, n_iter=10) -> None:
+    def __init__(self, VehicleBox=VehicleBox, n_iter=10, fast_get_steps=False) -> None:
         print('initializing action mask')
+        self.fast_get_steps = fast_get_steps
         self.vehicle_box_base = VehicleBox
         self.n_iter = n_iter
         self.action_space = discrete_actions
@@ -164,6 +165,11 @@ class ActionMask():
 
 
     def get_steps(self, raw_lidar_obs:np.ndarray):
+        if self.fast_get_steps:
+            return self._get_steps_fast(raw_lidar_obs)
+        return self._get_steps_original(raw_lidar_obs)
+
+    def _get_steps_original(self, raw_lidar_obs:np.ndarray):
         '''
         raw_lidar_obs: the raw lidar obs which already substract the vehicle base.
         '''
@@ -176,6 +182,23 @@ class ActionMask():
         max_step = np.argmin(step_save, axis=-1) # (lidar_num, n_action)
         max_step[np.sum(step_save, axis=-1) == self.n_iter] = self.n_iter
         
+        step_len = np.min(max_step, axis=0) # (n_action)
+
+        step_len = self.post_process(step_len)
+        if np.sum(step_len) == 0:
+            return np.clip(step_len, 0.01, 1)
+        return step_len
+
+    def _get_steps_fast(self, raw_lidar_obs:np.ndarray):
+        '''
+        raw_lidar_obs: the raw lidar obs which already substract the vehicle base.
+        '''
+        lidar_obs = np.clip(raw_lidar_obs, 0, 10) + self.vehicle_lidar_base
+        dist_obs = self._linear_interpolate(lidar_obs.reshape(-1), self.up_sample_rate).reshape(-1,1,1) # (lidar_num*upsample_rate, 1, 1)
+        step_valid = self.dist_star <= dist_obs
+        max_step = np.argmin(step_valid, axis=-1) # (lidar_num, n_action)
+        max_step[np.all(step_valid, axis=-1)] = self.n_iter
+
         step_len = np.min(max_step, axis=0) # (n_action)
 
         step_len = self.post_process(step_len)

@@ -1,0 +1,447 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "note": "measurement_only_not_quality_evidence",
+  "created_at_utc": "2026-06-19T15:55:30+00:00",
+  "original_hope_imports": [
+    "train.train_HOPE_sac.SceneChoose",
+    "train.train_HOPE_sac.DlpCaseChoose",
+    "env.car_parking_base.CarParking",
+    "env.env_wrapper.CarParkingWrapper",
+    "model.agent.parking_agent.ParkingAgent",
+    "model.agent.parking_agent.RsPlanner",
+    "model.agent.sac_agent.SACAgent",
+    "model.replay_memory.ReplayMemory"
+  ],
+  "cli_args": {
+    "episodes": 16,
+    "max_steps": 160,
+    "updates": 20,
+    "profile_mode": "command-only",
+    "action_mask_mode": "fast",
+    "detail": "env-step"
+  },
+  "profile_mode": {
+    "name": "command-only",
+    "verbose": false,
+    "render_mode": "rgb_array",
+    "expected_effective_render_mode": "rgb_array",
+    "description": "Validated command-only flags: --visualize= --verbose=.",
+    "effective_render_mode": "rgb_array"
+  },
+  "profile_detail": {
+    "name": "env-step",
+    "components": [
+      "env.raw_step.total",
+      "env.render.total",
+      "env.render.draw",
+      "env.render.img_capture",
+      "env.render.img_process",
+      "env.render.lidar_total",
+      "env.render.lidar_get_observation",
+      "env.render.lidar_rotate_filter",
+      "env.render.lidar_fast_calc",
+      "env.render.action_mask",
+      "env.render.action_mask_post_process",
+      "env.render.target",
+      "env.sim.vehicle_step",
+      "env.sim.kinematic_step",
+      "env.sim.vehicle_retreat",
+      "env.status.total",
+      "env.status.detect_collision",
+      "env.status.detect_outbound",
+      "env.status.check_arrived",
+      "env.status.check_time_exceeded",
+      "env.reward.total",
+      "env.reward.components",
+      "env.rs.find_path",
+      "env.rs.calc_all_paths",
+      "env.rs.calc_optimal_path",
+      "env.rs.traj_valid",
+      "env.wrapper.action_rescale",
+      "env.wrapper.reward_shaping",
+      "env.wrapper.observation_rescale"
+    ],
+    "nested_timings": true
+  },
+  "action_mask_mode": {
+    "name": "fast",
+    "fast_get_steps": true,
+    "description": "Opt-in exact-output fast ActionMask.get_steps path."
+  },
+  "environment": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "sdl_videodriver": "dummy",
+    "torch_force_no_weights_only_load": "1",
+    "torch_version": "2.11.0+cu128",
+    "torch_cuda_available": true,
+    "torch_device_count": 1,
+    "torch_cuda_device_name": "NVIDIA GeForce RTX 4080 SUPER"
+  },
+  "total_seconds": 22.188302900176495,
+  "measured_component_seconds": 57.58861573995091,
+  "components": {
+    "ParkingAgent.get_action": {
+      "seconds": 5.49228809424676,
+      "calls": 1551,
+      "avg_ms": 3.5411270755943005,
+      "percent_measured_wall": 9.53710733219899
+    },
+    "SACAgent.update": {
+      "seconds": 0.8925663996487856,
+      "calls": 20,
+      "avg_ms": 44.62831998243928,
+      "percent_measured_wall": 1.549900771498465
+    },
+    "env.raw_step.total": {
+      "seconds": 12.973043005680665,
+      "calls": 1567,
+      "avg_ms": 8.27890427931121,
+      "percent_measured_wall": 22.527096439098614
+    },
+    "env.render.action_mask": {
+      "seconds": 1.2862146026454866,
+      "calls": 1567,
+      "avg_ms": 0.8208134030922059,
+      "percent_measured_wall": 2.23345289015725
+    },
+    "env.render.action_mask_post_process": {
+      "seconds": 0.07788069592788815,
+      "calls": 1567,
+      "avg_ms": 0.04970050793100712,
+      "percent_measured_wall": 0.13523627009818892
+    },
+    "env.render.draw": {
+      "seconds": 1.704351797932759,
+      "calls": 1567,
+      "avg_ms": 1.087652710869661,
+      "percent_measured_wall": 2.9595290250229094
+    },
+    "env.render.img_capture": {
+      "seconds": 2.189363804180175,
+      "calls": 1567,
+      "avg_ms": 1.3971689879899012,
+      "percent_measured_wall": 3.801730213600792
+    },
+    "env.render.img_process": {
+      "seconds": 1.84378139837645,
+      "calls": 1567,
+      "avg_ms": 1.176631396538896,
+      "percent_measured_wall": 3.2016421556341816
+    },
+    "env.render.lidar_fast_calc": {
+      "seconds": 0.271765005774796,
+      "calls": 1567,
+      "avg_ms": 0.17343012493605361,
+      "percent_measured_wall": 0.4719075155443694
+    },
+    "env.render.lidar_get_observation": {
+      "seconds": 0.7522979010827839,
+      "calls": 1567,
+      "avg_ms": 0.48008800324364004,
+      "percent_measured_wall": 1.3063309326271804
+    },
+    "env.render.lidar_rotate_filter": {
+      "seconds": 0.45963880722410977,
+      "calls": 1567,
+      "avg_ms": 0.2933240633210656,
+      "percent_measured_wall": 0.798141787779151
+    },
+    "env.render.lidar_total": {
+      "seconds": 0.7572069030720741,
+      "calls": 1567,
+      "avg_ms": 0.4832207422285093,
+      "percent_measured_wall": 1.314855190288551
+    },
+    "env.render.target": {
+      "seconds": 0.023948403308168054,
+      "calls": 1567,
+      "avg_ms": 0.015282963183259767,
+      "percent_measured_wall": 0.04158530813852215
+    },
+    "env.render.total": {
+      "seconds": 8.769603702006862,
+      "calls": 1567,
+      "avg_ms": 5.596428654758686,
+      "percent_measured_wall": 15.228016144036486
+    },
+    "env.reset": {
+      "seconds": 0.5330022992566228,
+      "calls": 16,
+      "avg_ms": 33.312643703538924,
+      "percent_measured_wall": 0.9255341397047393
+    },
+    "env.reward.components": {
+      "seconds": 0.0458206026814878,
+      "calls": 1557,
+      "avg_ms": 0.02942877500416686,
+      "percent_measured_wall": 0.07956538300624702
+    },
+    "env.reward.total": {
+      "seconds": 0.048889505909755826,
+      "calls": 1567,
+      "avg_ms": 0.03119942942549829,
+      "percent_measured_wall": 0.08489439324348917
+    },
+    "env.rs.calc_all_paths": {
+      "seconds": 0.730279304785654,
+      "calls": 754,
+      "avg_ms": 0.9685401920234137,
+      "percent_measured_wall": 1.2680966461901562
+    },
+    "env.rs.find_path": {
+      "seconds": 1.8076752959750593,
+      "calls": 754,
+      "avg_ms": 2.397447342141988,
+      "percent_measured_wall": 3.1389455585073596
+    },
+    "env.rs.traj_valid": {
+      "seconds": 1.0167689004447311,
+      "calls": 2374,
+      "avg_ms": 0.428293555368463,
+      "percent_measured_wall": 1.7655727392998766
+    },
+    "env.sim.kinematic_step": {
+      "seconds": 0.6116043983493,
+      "calls": 12721,
+      "avg_ms": 0.04807832704577471,
+      "percent_measured_wall": 1.0620230934375665
+    },
+    "env.sim.vehicle_retreat": {
+      "seconds": 0.00045120157301425934,
+      "calls": 417,
+      "avg_ms": 0.001082018160705658,
+      "percent_measured_wall": 0.0007834909160722326
+    },
+    "env.sim.vehicle_step": {
+      "seconds": 1.3169722359161824,
+      "calls": 12721,
+      "avg_ms": 0.10352741419040819,
+      "percent_measured_wall": 2.286862115010971
+    },
+    "env.status.check_arrived": {
+      "seconds": 0.2639529015868902,
+      "calls": 14278,
+      "avg_ms": 0.018486685921479916,
+      "percent_measured_wall": 0.4583421535582741
+    },
+    "env.status.check_time_exceeded": {
+      "seconds": 0.0010496992617845535,
+      "calls": 1557,
+      "avg_ms": 0.0006741806434069066,
+      "percent_measured_wall": 0.0018227548071733672
+    },
+    "env.status.detect_collision": {
+      "seconds": 0.6991382802370936,
+      "calls": 14284,
+      "avg_ms": 0.048945553082966504,
+      "percent_measured_wall": 1.214021679899628
+    },
+    "env.status.detect_outbound": {
+      "seconds": 0.0080752014182508,
+      "calls": 1565,
+      "avg_ms": 0.005159873110703386,
+      "percent_measured_wall": 0.014022218305637785
+    },
+    "env.status.total": {
+      "seconds": 0.14907550136558712,
+      "calls": 1565,
+      "avg_ms": 0.09525591141571062,
+      "percent_measured_wall": 0.258862796839496
+    },
+    "env.step": {
+      "seconds": 12.725504202069715,
+      "calls": 1551,
+      "avg_ms": 8.204709350141659,
+      "percent_measured_wall": 22.09725661671298
+    },
+    "env.wrapper.action_rescale": {
+      "seconds": 0.040378597099334,
+      "calls": 1551,
+      "avg_ms": 0.026033911733935527,
+      "percent_measured_wall": 0.070115588958882
+    },
+    "env.wrapper.observation_rescale": {
+      "seconds": 0.0025494967121630907,
+      "calls": 1567,
+      "avg_ms": 0.0016269921583682773,
+      "percent_measured_wall": 0.004427084553786957
+    },
+    "env.wrapper.reward_shaping": {
+      "seconds": 0.007563896011561155,
+      "calls": 1551,
+      "avg_ms": 0.0048767865967512284,
+      "percent_measured_wall": 0.013134359828541352
+    },
+    "replay.push": {
+      "seconds": 0.08277269802056253,
+      "calls": 1551,
+      "avg_ms": 0.05336731013575921,
+      "percent_measured_wall": 0.14373100821581422
+    },
+    "replay.sample": {
+      "seconds": 0.0031410001683980227,
+      "calls": 21,
+      "avg_ms": 0.14957143659038202,
+      "percent_measured_wall": 0.00545420327965796
+    }
+  },
+  "episodes_completed": 16,
+  "transitions_collected": 1551,
+  "updates_requested": 20,
+  "updates_completed": 20,
+  "episode_summaries": [
+    {
+      "episode": 1,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.09604108842704193
+    },
+    {
+      "episode": 2,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 45,
+      "done": true,
+      "status": "Status.ARRIVED",
+      "total_reward": 6.0514777444334245
+    },
+    {
+      "episode": 3,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 63,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.557215476461152
+    },
+    {
+      "episode": 4,
+      "scene": "dlp",
+      "case_id": 3,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.9165691408101492
+    },
+    {
+      "episode": 5,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 19,
+      "done": true,
+      "status": "Status.ARRIVED",
+      "total_reward": 5.888340723647711
+    },
+    {
+      "episode": 6,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 79,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.621988006466019
+    },
+    {
+      "episode": 7,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 68,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.154206884887105
+    },
+    {
+      "episode": 8,
+      "scene": "dlp",
+      "case_id": 7,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -1.0665606215619488
+    },
+    {
+      "episode": 9,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.8609605497407732
+    },
+    {
+      "episode": 10,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 16,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.570131878869136
+    },
+    {
+      "episode": 11,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.7712098284218928
+    },
+    {
+      "episode": 12,
+      "scene": "dlp",
+      "case_id": 11,
+      "steps": 38,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.490332898364172
+    },
+    {
+      "episode": 13,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 28,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.511087791529034
+    },
+    {
+      "episode": 14,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 157,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.597980714714571
+    },
+    {
+      "episode": 15,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 160,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -1.061621441208361
+    },
+    {
+      "episode": 16,
+      "scene": "dlp",
+      "case_id": 15,
+      "steps": 78,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.630994112387283
+    }
+  ],
+  "skipped_components": [],
+  "notes": [
+    "measurement_only_not_quality_evidence",
+    "bounded diagnostic only; do not use as Stage 3 training-quality evidence",
+    "timing wrappers are installed only on objects created by this diagnostic process",
+    "detail timings include nested calls; do not sum them as exclusive wall-clock percentages"
+  ]
+}

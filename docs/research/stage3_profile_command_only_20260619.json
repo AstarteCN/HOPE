@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "status": "pass",
+  "note": "measurement_only_not_quality_evidence",
+  "created_at_utc": "2026-06-19T15:36:17+00:00",
+  "original_hope_imports": [
+    "train.train_HOPE_sac.SceneChoose",
+    "train.train_HOPE_sac.DlpCaseChoose",
+    "env.car_parking_base.CarParking",
+    "env.env_wrapper.CarParkingWrapper",
+    "model.agent.parking_agent.ParkingAgent",
+    "model.agent.parking_agent.RsPlanner",
+    "model.agent.sac_agent.SACAgent",
+    "model.replay_memory.ReplayMemory"
+  ],
+  "cli_args": {
+    "episodes": 12,
+    "max_steps": 120,
+    "updates": 20,
+    "profile_mode": "command-only"
+  },
+  "profile_mode": {
+    "name": "command-only",
+    "verbose": false,
+    "render_mode": "rgb_array",
+    "expected_effective_render_mode": "rgb_array",
+    "description": "Validated command-only flags: --visualize= --verbose=.",
+    "effective_render_mode": "rgb_array"
+  },
+  "environment": {
+    "python": "3.13.12 (tags/v3.13.12:1cbe481, Feb  3 2026, 18:22:25) [MSC v.1944 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "sdl_videodriver": "dummy",
+    "torch_force_no_weights_only_load": "1",
+    "torch_version": "2.11.0+cu128",
+    "torch_cuda_available": true,
+    "torch_device_count": 1,
+    "torch_cuda_device_name": "NVIDIA GeForce RTX 4080 SUPER"
+  },
+  "total_seconds": 18.967075100168586,
+  "measured_component_seconds": 16.224459900520742,
+  "components": {
+    "ParkingAgent.get_action": {
+      "seconds": 3.8346312008798122,
+      "calls": 1171,
+      "avg_ms": 3.274663706985322,
+      "percent_measured_wall": 23.634877366591017
+    },
+    "SACAgent.update": {
+      "seconds": 0.9073296994902194,
+      "calls": 20,
+      "avg_ms": 45.36648497451097,
+      "percent_measured_wall": 5.592356880003738
+    },
+    "env.reset": {
+      "seconds": 0.5251731008756906,
+      "calls": 12,
+      "avg_ms": 43.76442507297421,
+      "percent_measured_wall": 3.2369219320443112
+    },
+    "env.step": {
+      "seconds": 10.88138600345701,
+      "calls": 1171,
+      "avg_ms": 9.29238770577029,
+      "percent_measured_wall": 67.06778573940547
+    },
+    "replay.push": {
+      "seconds": 0.07290429482236505,
+      "calls": 1171,
+      "avg_ms": 0.06225815100116571,
+      "percent_measured_wall": 0.44934805392212224
+    },
+    "replay.sample": {
+      "seconds": 0.003035600995644927,
+      "calls": 21,
+      "avg_ms": 0.14455242836404417,
+      "percent_measured_wall": 0.01871002803333685
+    }
+  },
+  "episodes_completed": 12,
+  "transitions_collected": 1171,
+  "updates_requested": 20,
+  "updates_completed": 20,
+  "episode_summaries": [
+    {
+      "episode": 1,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 100,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.7285969182266925
+    },
+    {
+      "episode": 2,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 120,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.44109679969313254
+    },
+    {
+      "episode": 3,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 118,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.784119518545571
+    },
+    {
+      "episode": 4,
+      "scene": "dlp",
+      "case_id": 3,
+      "steps": 120,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.6089226143484789
+    },
+    {
+      "episode": 5,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 41,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.725394606145557
+    },
+    {
+      "episode": 6,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 120,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.4120766708546871
+    },
+    {
+      "episode": 7,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 114,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.6878508243461985
+    },
+    {
+      "episode": 8,
+      "scene": "dlp",
+      "case_id": 7,
+      "steps": 120,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.27028242926177576
+    },
+    {
+      "episode": 9,
+      "scene": "Normal",
+      "case_id": null,
+      "steps": 96,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.62364228258096
+    },
+    {
+      "episode": 10,
+      "scene": "Complex",
+      "case_id": null,
+      "steps": 14,
+      "done": true,
+      "status": "Status.ARRIVED",
+      "total_reward": 5.984002679357057
+    },
+    {
+      "episode": 11,
+      "scene": "Extrem",
+      "case_id": null,
+      "steps": 120,
+      "done": false,
+      "status": "Status.CONTINUE",
+      "total_reward": -0.9720525083452292
+    },
+    {
+      "episode": 12,
+      "scene": "dlp",
+      "case_id": 11,
+      "steps": 88,
+      "done": true,
+      "status": "Status.OUTBOUND",
+      "total_reward": -5.70608245657215
+    }
+  ],
+  "skipped_components": [],
+  "notes": [
+    "measurement_only_not_quality_evidence",
+    "bounded diagnostic only; do not use as Stage 3 training-quality evidence",
+    "timing wrappers are installed only on objects created by this diagnostic process"
+  ]
+}

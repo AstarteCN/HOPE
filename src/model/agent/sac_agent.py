@@ -7,27 +7,10 @@ from torch.distributions import Normal
 import numpy as np
 
 from model.agent_base import ConfigBase, AgentBase
-from model.network import *
+from model.network import MultiObsEmbedding, SACCriticAdapter
 from model.replay_memory import ReplayMemory
 from model.state_norm import StateNorm
 from model.action_mask import ActionMask
-
-class SACCriticAdapter(nn.Module):
-    def __init__(self, configs: dict, action_dim:int=2):
-        super().__init__()
-        self.configs = deepcopy(configs)
-        self.configs['input_action_dim'] = action_dim
-        self.configs['n_modal'] += 1
-        self.net = MultiObsEmbedding(self.configs)
-
-    def forward(self, state: dict, action: torch.Tensor) -> torch.Tensor:
-        state_action = state
-        state_action['action'] = action
-        x = self.net(state_action)
-        return x
-    
-    def load_img_encoder(self, path: str = None, device: str = None, require_grad: bool = False) -> None:
-        self.net.load_img_encoder(path, device, require_grad)
 
 
 class SACConfig(ConfigBase):
@@ -231,8 +214,10 @@ class SACAgent(AgentBase):
                 merged_obs[obs_type] = torch.FloatTensor(np.array(merged_obs[obs_type])).to(self.device)
             obs = merged_obs 
         elif isinstance(obs, dict):
+            tensor_obs = {}
             for obs_type in self.configs.observation_shape.keys():
-                obs[obs_type] = torch.FloatTensor(obs[obs_type]).to(self.device).unsqueeze(0)
+                tensor_obs[obs_type] = torch.FloatTensor(obs[obs_type]).to(self.device).unsqueeze(0)
+            obs = tensor_obs
         else:
             raise NotImplementedError()
         return obs

@@ -33,6 +33,7 @@ from env.parking_map_normal import ParkingMapNormal
 from env.parking_map_dlp import ParkingMapDLP
 import env.reeds_shepp as rsCurve
 from env.observation_processor import Obs_Processor
+from env.ogm import OGMConfig, build_ego_ogm
 from model.action_mask import ActionMask
 from configs import *
 
@@ -53,6 +54,7 @@ class CarParking(gym.Env):
         use_lidar_observation: bool =USE_LIDAR,
         use_img_observation: bool=USE_IMG,
         use_action_mask: bool=USE_ACTION_MASK,
+        use_ogm_observation: bool=USE_OGM,
     ):
         super().__init__()
 
@@ -60,6 +62,7 @@ class CarParking(gym.Env):
         self.use_lidar_observation = use_lidar_observation
         self.use_img_observation = use_img_observation
         self.use_action_mask = use_action_mask
+        self.use_ogm_observation = use_ogm_observation
         self.render_mode = "human" if render_mode is None else render_mode
         self.fps = fps
         self.screen: Optional[pygame.Surface] = None
@@ -99,6 +102,18 @@ class CarParking(gym.Env):
                 self.img_processor.n_channels), dtype=np.uint8
             )
             self.raw_img_shape = (OBS_W, OBS_H, 3)
+        if self.use_ogm_observation:
+            self.ogm_config = OGMConfig(
+                size=OGM_SIZE,
+                resolution=OGM_RESOLUTION,
+                channels=OGM_CHANNELS,
+            )
+            self.observation_space["ogm"] = spaces.Box(
+                low=0,
+                high=1,
+                shape=(OGM_SIZE, OGM_SIZE, OGM_CHANNELS),
+                dtype=np.float32,
+            )
         if self.use_lidar_observation:
             # the observation is composed of lidar points and target representation
             # the target representation is (relative_distance, cos(theta), sin(theta), cos(phi), sin(phi))
@@ -368,6 +383,14 @@ class CarParking(gym.Env):
         obs_list = [obs.shape for obs in self.map.obstacles]
         lidar_view = self.lidar.get_observation(self.vehicle.state, obs_list)
         return lidar_view
+
+    def _get_ogm_observation(self):
+        return build_ego_ogm(
+            ego_state=self.vehicle.state,
+            obstacles=self.map.obstacles,
+            target_box=self.map.dest_box,
+            config=self.ogm_config,
+        )
     
     def _get_targt_repr(self,):
         # target position representation
@@ -404,6 +427,8 @@ class CarParking(gym.Env):
             observation['lidar'] = self._get_lidar_observation()
         if self.use_action_mask:
             observation['action_mask'] = self.action_filter.get_steps(observation['lidar'])
+        if self.use_ogm_observation:
+            observation["ogm"] = self._get_ogm_observation()
         observation['target'] = self._get_targt_repr()
         pygame.display.update()
         self.clock.tick(self.fps)

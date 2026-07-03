@@ -450,7 +450,7 @@ def CCSCC(x, y, phi, paths):
 
 
 def generate_local_course(L, lengths, mode, maxc, step_size):
-    point_num = int(L / step_size) + len(lengths) + 3
+    point_num = math.ceil(L / step_size) + len(lengths) + 3
 
     px = [0.0 for _ in range(point_num)]
     py = [0.0 for _ in range(point_num)]
